@@ -242,15 +242,8 @@ function StartPage() {
 
   return (
     <main className="min-h-svh overflow-hidden bg-[#f1d733] text-[#111]">
-      <header className="relative z-20 flex h-[68px] items-center px-7 max-sm:h-14 max-sm:px-4">
-        <a className="text-[18px] leading-none font-bold tracking-[-0.05em]" href="#model" aria-label="Apex 3D demo">
-          Car Build
-          <span className="ml-[7px] align-top text-[9px] tracking-[0.12em] text-[#ff3b24]">3D - View</span>
-        </a>
-      </header>
-
-      <section className="relative h-[calc(100svh-68px)] px-[3vw] pt-[18px] pb-[34px] max-sm:h-[calc(100svh-56px)] max-sm:p-[10px]" id="model">
-        <div className="absolute top-[5%] right-[5%] bottom-[8%] left-[25%] overflow-hidden border-[3px] border-[#111] bg-[#e9e5dc] shadow-[10px_10px_0_#111] max-[900px]:left-[18%] max-sm:top-[20%] max-sm:right-[15px] max-sm:bottom-[39%] max-sm:left-[16%] max-sm:shadow-[6px_6px_0_#111]">
+      <section className="relative min-h-svh px-[3vw] pt-[18px] pb-[34px] max-sm:p-[10px]" id="model">
+        <div className="absolute top-[8%] right-[7%] bottom-[12%] left-[29%] overflow-hidden border-[3px] border-[#111] bg-[#e9e5dc] shadow-[10px_10px_0_#111] max-[900px]:left-[22%] max-sm:top-[20%] max-sm:right-[15px] max-sm:bottom-[39%] max-sm:left-[16%] max-sm:shadow-[6px_6px_0_#111]">
           {!sceneReady && (
             <div className="absolute inset-0 grid place-items-center">
               <span className="h-7 w-7 animate-spin rounded-full border border-[#999] border-t-[#ff3b24]" />
@@ -274,7 +267,7 @@ function StartPage() {
           </div>
         </div>
 
-        <div aria-hidden="true" className="pointer-events-none absolute top-[5%] left-[3vw] z-30 max-sm:top-5 max-sm:left-[18px]">
+        <div aria-hidden="true" className="pointer-events-none absolute left-[3vw] z-30 max-sm:top-5 max-sm:left-[18px]">
           <span className="mb-[17px] block text-[10px] font-bold tracking-[0.2em] text-[#e22e1d]">INTERACTIVE</span>
           <strong className="block text-[clamp(36px,4.6vw,72px)] leading-[0.76] font-black tracking-[-0.08em] max-[900px]:text-[50px] max-sm:text-[36px]">
             CAR<br />
@@ -283,14 +276,13 @@ function StartPage() {
           <strong className="block text-[clamp(36px,4.6vw,72px)] leading-[0.76] font-black tracking-[-0.08em] max-[900px]:text-[50px] max-sm:text-[36px] pl-8">
             BUILDER
           </strong>
-          <small className="mt-7 block text-[9px] font-bold tracking-[0.15em] max-sm:hidden">ROTATE / RECOLOR / EXPLORE</small>
         </div>
 
-        <aside className="absolute top-[27%] left-[3vw] z-40 w-[320px] border-[3px] border-[#111] bg-[#fff5dc] p-5 shadow-[10px_10px_0_#111] max-[900px]:top-[44%] max-[900px]:w-[280px] max-sm:right-[18px] max-sm:top-auto max-sm:bottom-7 max-sm:left-[18px] max-sm:w-auto max-sm:p-4 max-sm:shadow-[6px_6px_0_#111]">
+        <aside className="absolute top-[23%] left-[3vw] z-40 w-[320px] border-[3px] border-[#111] bg-[#fff5dc] px-5 pt-3 pb-5 shadow-[10px_10px_0_#111] max-[900px]:top-[44%] max-[900px]:w-[280px] max-sm:right-[18px] max-sm:top-auto max-sm:bottom-7 max-sm:left-[18px] max-sm:w-auto max-sm:px-4 max-sm:pt-3 max-sm:pb-4 max-sm:shadow-[6px_6px_0_#111]">
           <div className="mb-4 border-b-2 border-[#111] pb-3">
-            <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-[#e22e1d]">Money value</p>
+            <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-[#e22e1d]">Price </p>
             <p className={`price-counter mt-2 text-[28px] leading-none font-black tracking-[-0.06em] ${priceDirection === 'up' ? 'price-counter-up' : ''} ${priceDirection === 'down' ? 'price-counter-down' : ''}`}>{formatPrice(displayMoney)} kr</p>
-            <p className="mt-2 text-[10px] text-[#5f5a52]">Basepris {formatPrice(basePrice)} kr</p>
+            <p className="mt-2 text-[10px] text-[#5f5a52]">Base price {formatPrice(basePrice)} kr</p>
           </div>
           <ColorField
             label="Body Color"
