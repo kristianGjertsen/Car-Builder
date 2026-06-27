@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Spline from '@splinetool/react-spline'
-import type { Application } from '@splinetool/runtime'
+import type { Application, SPEObject } from '@splinetool/runtime'
 
 const customBodyColorValue = '__custom_body_color__'
 const customRimColorValue = '__custom_rim_color__'
@@ -30,6 +30,8 @@ type ColorOption = {
   custom?: boolean
 }
 const basePrice = 730000
+const wingPrice = 25000
+const wingObjectNames = ['Wing', 'Object_50', 'Object_51']
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('nb-NO').format(price)
@@ -55,13 +57,13 @@ function ColorField({
   const selected = options.find((option) => option.value === value)
 
   return (
-    <fieldset className="m-0 min-w-0 border-0 p-0 not-first:mt-6 max-sm:!m-0">
-      <legend className="mb-3 flex w-full justify-between text-[11px] uppercase">
+    <fieldset className="m-0 min-w-0 border-0 p-0 not-first:mt-6 max-[820px]:not-first:mt-5">
+      <legend className="mb-3 flex w-full justify-between gap-4 text-[11px] uppercase">
         <span className="font-bold tracking-[0.12em] text-[#3e3c34]">{label}</span>
         <strong className="text-[12px] font-semibold">{selected?.name}</strong>
       </legend>
 
-      <div className="grid grid-cols-3 gap-3 max-sm:grid-cols-2 max-sm:gap-2">
+      <div className="grid grid-cols-3 gap-3 max-[420px]:grid-cols-2 max-[820px]:gap-2">
         {options.map((option) => {
           const isSelected = value === option.value
 
@@ -75,7 +77,7 @@ function ColorField({
               onClick={() => onChange(option)}
               type="button"
             >
-              <span className="relative grid h-12 w-12 place-items-center border border-black/20">
+              <span className="relative grid h-12 w-12 place-items-center border border-black/20 max-[820px]:h-10 max-[820px]:w-10">
                 <span
                   className="absolute inset-0"
                   style={{
@@ -97,6 +99,7 @@ function ColorField({
 
 function StartPage() {
   const splineRef = useRef<Application | null>(null)
+  const wingObjectsRef = useRef<SPEObject[]>([])
   const customPickerRef = useRef<HTMLDivElement | null>(null)
   const animationFrameRef = useRef<number | null>(null)
   const resetDirectionTimeoutRef = useRef<number | null>(null)
@@ -106,11 +109,13 @@ function StartPage() {
   const [customRimColor, setCustomRimColor] = useState('#8b5e3c')
   const [activeCustomPicker, setActiveCustomPicker] = useState<'body' | 'rim' | null>(null)
   const [sceneReady, setSceneReady] = useState(false)
+  const [wingOn, setWingOn] = useState(false)
+  const [wingAvailable, setWingAvailable] = useState(false)
   const selectedBodyOption = bodyColorOptions.find((option) => option.value === bodyColor) ?? bodyColorOptions[0]
   const selectedRimOption = rimColorOptions.find((option) => option.value === rimColor) ?? rimColorOptions[0]
   const effectiveBodyColor = selectedBodyOption.custom ? customBodyColor : selectedBodyOption.value
   const effectiveRimColor = selectedRimOption.custom ? customRimColor : selectedRimOption.value
-  const money = basePrice + selectedBodyOption.price + selectedRimOption.price
+  const money = basePrice + selectedBodyOption.price + selectedRimOption.price + (wingOn ? wingPrice : 0)
   const [displayMoney, setDisplayMoney] = useState(money)
   const [priceDirection, setPriceDirection] = useState<'up' | 'down' | 'idle'>('idle')
 
@@ -129,6 +134,54 @@ function StartPage() {
     }
 
     app.requestRender?.()
+  }
+
+  const getWingObjects = (app = splineRef.current) => {
+    if (!app) return []
+
+    const allObjects = app.getAllObjects()
+    const wingObjects = allObjects.filter((object) => wingObjectNames.includes(object.name))
+    const fallbackObjects = wingObjectNames
+      .map((objectName) => app.findObjectByName(objectName))
+      .filter((object): object is SPEObject => Boolean(object))
+
+    return [...wingObjects, ...fallbackObjects].filter(
+      (object, index, objects) => objects.findIndex((item) => item.uuid === object.uuid) === index,
+    )
+  }
+
+  const setWingVisibility = (visible: boolean, app = splineRef.current) => {
+    const wingObjects = getWingObjects(app)
+
+    wingObjectsRef.current = wingObjects
+    setWingAvailable(wingObjects.length > 0)
+
+    wingObjects.forEach((object) => {
+      if (visible) {
+        object.show()
+        return
+      }
+
+      object.hide()
+    })
+
+    app?.requestRender?.()
+  }
+
+  const toggleWing = () => {
+    const wingObjects = wingObjectsRef.current.length > 0 ? wingObjectsRef.current : getWingObjects()
+
+    if (wingObjects.length === 0) {
+      setWingAvailable(false)
+      console.warn(`Wing objects were not found in the Spline scene. Tried: ${wingObjectNames.join(', ')}`)
+      return
+    }
+
+    const nextWingOn = !wingOn
+
+    wingObjectsRef.current = wingObjects
+    setWingOn(nextWingOn)
+    setWingVisibility(nextWingOn)
   }
 
   const selectBodyColor = (option: ColorOption) => {
@@ -241,9 +294,9 @@ function StartPage() {
   }, [activeCustomPicker])
 
   return (
-    <main className="min-h-svh overflow-hidden bg-[#f1d733] text-[#111]">
-      <section className="relative min-h-svh px-[3vw] pt-[18px] pb-[34px] max-sm:p-[10px]" id="model">
-        <div className="absolute top-[8%] right-[7%] bottom-[12%] left-[29%] overflow-hidden border-[3px] border-[#111] bg-[#e9e5dc] shadow-[10px_10px_0_#111] max-[900px]:left-[22%] max-sm:top-[20%] max-sm:right-[15px] max-sm:bottom-[39%] max-sm:left-[16%] max-sm:shadow-[6px_6px_0_#111]">
+    <main className="min-h-svh overflow-x-hidden bg-[#f1d733] text-[#111]">
+      <section className="relative min-h-svh px-[3vw] pt-[18px] pb-[34px] max-[820px]:flex max-[820px]:flex-col max-[820px]:gap-5 max-[820px]:px-4 max-[820px]:pt-4 max-[820px]:pb-8" id="model">
+        <div className="absolute top-[8%] right-[7%] bottom-[12%] left-[29%] overflow-hidden border-[3px] border-[#111] bg-[#e9e5dc] shadow-[10px_10px_0_#111] max-[1100px]:left-[32%] max-[900px]:top-[7%] max-[900px]:right-[4%] max-[900px]:bottom-[18%] max-[900px]:left-[30%] max-[820px]:relative max-[820px]:inset-auto max-[820px]:order-2 max-[820px]:h-[44svh] max-[820px]:min-h-[300px] max-[820px]:w-full max-[820px]:shadow-[7px_7px_0_#111] max-[520px]:h-[40svh] max-[520px]:min-h-[250px]">
           {!sceneReady && (
             <div className="absolute inset-0 grid place-items-center">
               <span className="h-7 w-7 animate-spin rounded-full border border-[#999] border-t-[#ff3b24]" />
@@ -256,33 +309,36 @@ function StartPage() {
             onLoad={(app) => {
               splineRef.current = app
               setSceneReady(true)
+              setWingVisibility(wingOn, app)
               setColor('Body_Car', effectiveBodyColor)
               setColor('Rim_Car', effectiveRimColor)
             }}
           />
 
-          <div className="absolute bottom-5 left-[22px] z-30 flex items-center gap-[10px] text-[9px] font-semibold tracking-[0.1em] text-[#56524b] uppercase max-sm:bottom-3 max-sm:left-3">
+          <div className="absolute bottom-5 left-[22px] z-30 flex items-center gap-[10px] text-[9px] font-semibold tracking-[0.1em] text-[#56524b] uppercase max-[820px]:bottom-3 max-[820px]:left-3">
             <span className="grid h-[34px] w-[34px] place-items-center rounded-full border border-current text-[8px]">360°</span>
             Drag to rotate
           </div>
         </div>
 
-        <div aria-hidden="true" className="pointer-events-none absolute left-[3vw] z-30 max-sm:top-5 max-sm:left-[18px]">
-          <span className="mb-[17px] block text-[10px] font-bold tracking-[0.2em] text-[#e22e1d]">INTERACTIVE</span>
-          <strong className="block text-[clamp(36px,4.6vw,72px)] leading-[0.76] font-black tracking-[-0.08em] max-[900px]:text-[50px] max-sm:text-[36px]">
+        <div aria-hidden="true" className="pointer-events-none absolute left-[3vw] z-30 max-[820px]:relative max-[820px]:left-auto max-[820px]:order-1 max-[820px]:z-10">
+          <span className="mb-[17px] block text-[10px] font-bold tracking-[0.2em] text-[#e22e1d] max-[820px]:mb-3">INTERACTIVE</span>
+          <strong className="block text-[clamp(36px,4.6vw,72px)] leading-[0.76] font-black tracking-[-0.08em] max-[900px]:text-[50px] max-[820px]:text-[clamp(42px,15vw,92px)]">
             CAR<br />
           </strong>
 
-          <strong className="block text-[clamp(36px,4.6vw,72px)] leading-[0.76] font-black tracking-[-0.08em] max-[900px]:text-[50px] max-sm:text-[36px] pl-8">
+          <strong className="block pl-8 text-[clamp(36px,4.6vw,72px)] leading-[0.76] font-black tracking-[-0.08em] max-[900px]:text-[50px] max-[820px]:pl-[12vw] max-[820px]:text-[clamp(42px,15vw,92px)]">
             BUILDER
           </strong>
         </div>
 
-        <aside className="absolute top-[23%] left-[3vw] z-40 w-[320px] border-[3px] border-[#111] bg-[#fff5dc] px-5 pt-3 pb-5 shadow-[10px_10px_0_#111] max-[900px]:top-[44%] max-[900px]:w-[280px] max-sm:right-[18px] max-sm:top-auto max-sm:bottom-7 max-sm:left-[18px] max-sm:w-auto max-sm:px-4 max-sm:pt-3 max-sm:pb-4 max-sm:shadow-[6px_6px_0_#111]">
-          <div className="mb-4 border-b-2 border-[#111] pb-3">
+        <aside className="absolute top-[18%] left-[3vw] z-40 w-[320px] border-[3px] border-[#111] bg-[#fff5dc] px-5 pt-3 pb-5 shadow-[10px_10px_0_#111] max-[1100px]:w-[292px] max-[900px]:top-[50%] max-[900px]:w-[270px] max-[820px]:relative max-[820px]:inset-auto max-[820px]:order-3 max-[820px]:w-full max-[820px]:px-4 max-[820px]:pt-3 max-[820px]:pb-4 max-[820px]:shadow-[7px_7px_0_#111]">
+          <div className="mb-4 border-b-2 border-[#111] pb-3 max-[820px]:flex max-[820px]:items-end max-[820px]:justify-between max-[820px]:gap-4">
+            <div>
             <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-[#e22e1d]">Price </p>
-            <p className={`price-counter mt-2 text-[28px] leading-none font-black tracking-[-0.06em] ${priceDirection === 'up' ? 'price-counter-up' : ''} ${priceDirection === 'down' ? 'price-counter-down' : ''}`}>{formatPrice(displayMoney)} kr</p>
-            <p className="mt-2 text-[10px] text-[#5f5a52]">Base price {formatPrice(basePrice)} kr</p>
+              <p className={`price-counter mt-1 text-[28px] leading-none font-black tracking-[-0.06em] max-[420px]:text-[23px] ${priceDirection === 'up' ? 'price-counter-up' : ''} ${priceDirection === 'down' ? 'price-counter-down' : ''}`}>{formatPrice(displayMoney)} kr</p>
+            </div>
+            <p className="mt-1 text-[10px] text-[#5f5a52] max-[820px]:mb-1 max-[820px]:text-right">Base price {formatPrice(basePrice)} kr</p>
           </div>
           <ColorField
             label="Body Color"
@@ -299,20 +355,37 @@ function StartPage() {
             getOptionColor={(option) => option.custom ? customRimColor : option.value}
           />
 
+          <div className="mt-2 border-t-2 border-[#111] pt-2">
+            <button
+              className="flex w-full cursor-pointer items-center justify-between gap-4 border-[3px] border-[#111] bg-[#ff3b24] px-4 py-3 text-left text-[12px] font-black tracking-[-0.02em] uppercase shadow-[5px_5px_0_#111] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-[#d8d1c3] disabled:text-[#777] disabled:hover:translate-y-0 max-[420px]:px-3"
+              disabled={!sceneReady}
+              onClick={toggleWing}
+              type="button"
+            >
+              <span className="min-w-0">
+                <span className="block">{wingOn ? 'Remove wing' : 'Add wing'}</span>
+                <span className="mt-1 block text-[10px] leading-none font-bold tracking-normal normal-case">
+                  {wingOn ? 'Wing active' : ` ${formatPrice(wingPrice)} kr`}
+                </span>
+              </span>
+              <span className="shrink-0 text-[10px] font-bold">{wingOn ? 'ON' : 'OFF'}</span>
+            </button>
+          </div>
+
           {activeCustomPicker && (
             <div
               ref={customPickerRef}
-              className={`absolute left-full ml-4 w-[280px] border-[3px] border-[#111] bg-[#fff5dc] p-5 shadow-[10px_10px_0_#111] ${activeCustomPicker === 'body' ? 'top-0' : 'bottom-0'} max-[1200px]:top-full max-[1200px]:bottom-auto max-[1200px]:left-0 max-[1200px]:mt-4 max-[1200px]:ml-0`}
+              className={`absolute left-full ml-4 w-[240px] border-[3px] border-[#111] bg-[#fff5dc] p-4 shadow-[8px_8px_0_#111] ${activeCustomPicker === 'body' ? 'top-0' : 'bottom-0'} max-[1200px]:top-full max-[1200px]:bottom-auto max-[1200px]:left-0 max-[1200px]:mt-4 max-[1200px]:ml-0 max-[820px]:relative max-[820px]:top-auto max-[820px]:bottom-auto max-[820px]:left-auto max-[820px]:mt-4 max-[820px]:ml-0 max-[820px]:w-full max-[820px]:p-3 max-[820px]:shadow-[5px_5px_0_#111]`}
             >
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-[#e22e1d]">Custom color</p>
-                  <h2 className="mt-2 text-[22px] leading-none font-black tracking-[-0.06em]">
+                  <h2 className="mt-1 text-[18px] leading-none font-black tracking-[-0.06em]">
                     {activeCustomPicker === 'body' ? 'Body shade' : 'Rim finish'}
                   </h2>
                 </div>
                 <button
-                  className="cursor-pointer border-2 border-[#111] bg-white px-2 py-1 text-[11px] font-bold uppercase shadow-[3px_3px_0_#111]"
+                  className="cursor-pointer border-2 border-[#111] bg-white px-2 py-1 text-[10px] font-bold uppercase shadow-[2px_2px_0_#111]"
                   onClick={() => setActiveCustomPicker(null)}
                   type="button"
                 >
@@ -320,10 +393,10 @@ function StartPage() {
                 </button>
               </div>
 
-              <div className="mt-5 flex items-center gap-4">
+              <div className="mt-4 flex items-center gap-3 max-[420px]:items-start">
                 <input
                   aria-label={activeCustomPicker === 'body' ? 'Choose custom body color' : 'Choose custom rim color'}
-                  className="h-24 w-24 cursor-pointer border-[3px] border-[#111] bg-transparent p-1"
+                  className="h-18 w-18 shrink-0 cursor-pointer border-[3px] border-[#111] bg-transparent p-1 max-[420px]:h-16 max-[420px]:w-16"
                   onChange={(event) => {
                     const color = event.target.value
 
@@ -339,19 +412,19 @@ function StartPage() {
                 />
                 <div>
                   <p className="text-[11px] font-bold uppercase">
-                    {activeCustomPicker === 'body' ? 'Custom lakkering' : 'Custom felgfarge'}
+                    {activeCustomPicker === 'body' ? 'Custom body color' : 'Custom rim color'}
                   </p>
                   <p className="mt-1 text-[10px] text-[#5f5a52]">
-                    Legger til {formatPrice(activeCustomPicker === 'body' ? 30000 : 18000)} kr
+                    Adds {formatPrice(activeCustomPicker === 'body' ? 30000 : 18000)} kr
                   </p>
-                  <p className="mt-3 text-[12px] font-semibold">
+                  <p className="mt-2 text-[12px] font-semibold">
                     {(activeCustomPicker === 'body' ? customBodyColor : customRimColor).toUpperCase()}
                   </p>
                 </div>
               </div>
 
               <button
-                className="mt-5 w-full cursor-pointer border-[3px] border-[#111] bg-[#ff3b24] px-4 py-3 text-[12px] font-black uppercase shadow-[5px_5px_0_#111]"
+                className="mt-4 w-full cursor-pointer border-[3px] border-[#111] bg-[#ff3b24] px-4 py-2.5 text-[11px] font-black uppercase shadow-[4px_4px_0_#111]"
                 onClick={() => setActiveCustomPicker(null)}
                 type="button"
               >
