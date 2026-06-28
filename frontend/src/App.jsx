@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Start from './pages/start'
 
 function App() {
@@ -6,6 +6,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<Start />} path="/" />
+        <Route element={<Start />} path="/cars/:carId" />
+        <Route element={<Navigate replace to="/" />} path="*" />
       </Routes>
     </BrowserRouter>
   )

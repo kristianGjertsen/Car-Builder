@@ -1,27 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
-import Spline from '@splinetool/react-spline'
-import type { Application, SPEObject } from '@splinetool/runtime'
-
-const customBodyColorValue = '__custom_body_color__'
-const customRimColorValue = '__custom_rim_color__'
-
-const bodyColorOptions = [
-  { name: 'Crimson', value: '#d7263d', price: 0 },
-  { name: 'Sky', value: '#4dabf7', price: 7900 },
-  { name: 'Silver', value: '#f2f4f8', price: 12900 },
-  { name: 'Graphite', value: '#2b2d42', price: 18900 },
-  { name: 'Sunset', value: '#ff7f50', price: 14900 },
-  { name: 'Custom', value: customBodyColorValue, price: 30000, custom: true },
-]
-
-const rimColorOptions = [
-  { name: 'Silver', value: '#d7dce2', price: 0 },
-  { name: 'Gunmetal', value: '#626870', price: 5900 },
-  { name: 'Black', value: '#0d0d0f', price: 5900 },
-  { name: 'Bronze', value: '#b08d57', price: 9900 },
-  { name: 'White', value: '#f5f5f5', price: 3900 },
-  { name: 'Custom', value: customRimColorValue, price: 18000, custom: true },
-]
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import CarScene from '../components/CarScene'
+import { carConfigs, defaultCarConfig } from '../cars'
 
 type ColorOption = {
   name: string
@@ -29,9 +9,6 @@ type ColorOption = {
   price: number
   custom?: boolean
 }
-const basePrice = 730000
-const wingPrice = 25000
-const wingObjectNames = ['Wing', 'Object_50', 'Object_51']
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('nb-NO').format(price)
@@ -39,6 +16,35 @@ function formatPrice(price: number) {
 
 function getCustomPreviewBackground(color: string) {
   return `linear-gradient(135deg, #111 0 18%, transparent 18% 32%, #111 32% 50%, transparent 50% 68%, #111 68% 82%, transparent 82% 100%), ${color}`
+}
+
+function getColorOptions(colorConfig): ColorOption[] {
+  const colors = colorConfig.colors.map((option) => ({
+    ...option,
+    price: option.price ?? 0,
+  }))
+
+  if (!colorConfig.custom?.enabled) {
+    return colors
+  }
+
+  return [
+    ...colors,
+    {
+      name: colorConfig.custom.name ?? 'Custom',
+      value: colorConfig.custom.value,
+      price: colorConfig.custom.price ?? 0,
+      custom: true,
+    },
+  ]
+}
+
+function getDefaultAddOnValues(carConfig) {
+  return Object.fromEntries((carConfig.addOns ?? []).map((addOn) => [addOn.id, Boolean(addOn.defaultEnabled)]))
+}
+
+function getDefaultColorValue(colorConfig) {
+  return colorConfig.defaultValue ?? colorConfig.colors[0].value
 }
 
 function ColorField({
@@ -97,117 +103,153 @@ function ColorField({
   )
 }
 
+function CarSelectPage({
+  selectedCarId,
+  onSelectCar,
+}: {
+  selectedCarId: string
+  onSelectCar: (carId: string) => void
+}) {
+  return (
+    <main className="min-h-svh bg-[#f1d733] px-[3vw] py-6 text-[#111] max-[820px]:px-4">
+      <section className="mx-auto flex min-h-[calc(100svh-48px)] max-w-[1180px] flex-col justify-between gap-8">
+        <div>
+          <span className="mb-5 block text-[10px] font-bold tracking-[0.2em] text-[#e22e1d] uppercase">Select model</span>
+          <h1 className="max-w-[760px] text-[clamp(48px,9vw,132px)] leading-[0.78] font-black tracking-[-0.08em]">
+            CAR<br />
+            BUILDER
+          </h1>
+        </div>
+
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
+          {carConfigs.map((config) => {
+            const isSelected = selectedCarId === config.id
+            const paintColors = config.paint.colors.slice(0, 5)
+            const rimColors = config.rims.colors.slice(0, 4)
+
+            return (
+              <button
+                className={`cursor-pointer border-[3px] bg-[#fff5dc] p-5 text-left shadow-[8px_8px_0_#111] transition-transform hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ff3b24] ${isSelected ? 'border-[#ff3b24]' : 'border-[#111]'}`}
+                key={config.id}
+                onClick={() => onSelectCar(config.id)}
+                type="button"
+              >
+                <div className="mb-8 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[0.16em] text-[#e22e1d] uppercase">Model</p>
+                    <h2 className="mt-2 text-[30px] leading-none font-black tracking-[-0.06em]">{config.name}</h2>
+                  </div>
+                  <span className="border-2 border-[#111] bg-[#ff3b24] px-3 py-1 text-[10px] font-black uppercase shadow-[3px_3px_0_#111]">
+                    Build
+                  </span>
+                </div>
+
+                <div className="mb-5 grid h-32 place-items-center border-[3px] border-[#111] bg-[#e9e5dc] shadow-[5px_5px_0_#111]">
+                  <span className="text-[64px] leading-none font-black tracking-[-0.08em] text-[#111]">{config.name.slice(0, 2).toUpperCase()}</span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 border-t-2 border-[#111] pt-4">
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[0.12em] text-[#3e3c34] uppercase">From</p>
+                    <p className="mt-1 text-[20px] leading-none font-black tracking-[-0.04em]">{formatPrice(config.basePrice ?? 0)} kr</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex gap-1.5">
+                      {paintColors.map((color) => (
+                        <span className="h-5 w-5 border border-[#111]" key={color.value} style={{ background: color.value }} />
+                      ))}
+                    </div>
+                    <div className="flex gap-1.5">
+                      {rimColors.map((color) => (
+                        <span className="h-3 w-3 rounded-full border border-[#111]" key={color.value} style={{ background: color.value }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </section>
+    </main>
+  )
+}
+
 function StartPage() {
-  const splineRef = useRef<Application | null>(null)
-  const wingObjectsRef = useRef<SPEObject[]>([])
+  const navigate = useNavigate()
+  const { carId } = useParams()
   const customPickerRef = useRef<HTMLDivElement | null>(null)
   const animationFrameRef = useRef<number | null>(null)
   const resetDirectionTimeoutRef = useRef<number | null>(null)
-  const [bodyColor, setBodyColor] = useState(bodyColorOptions[0].value)
-  const [rimColor, setRimColor] = useState(rimColorOptions[2].value)
-  const [customBodyColor, setCustomBodyColor] = useState('#7c3aed')
-  const [customRimColor, setCustomRimColor] = useState('#8b5e3c')
+  const selectedCarId = carId ? decodeURIComponent(carId) : defaultCarConfig.id
+  const carConfig = useMemo(
+    () => carConfigs.find((config) => config.id === selectedCarId) ?? defaultCarConfig,
+    [selectedCarId],
+  )
+  const bodyColorOptions = useMemo(() => getColorOptions(carConfig.paint), [carConfig])
+  const rimColorOptions = useMemo(() => getColorOptions(carConfig.rims), [carConfig])
+  const [bodyColor, setBodyColor] = useState(() => getDefaultColorValue(defaultCarConfig.paint))
+  const [rimColor, setRimColor] = useState(() => getDefaultColorValue(defaultCarConfig.rims))
+  const [customBodyColor, setCustomBodyColor] = useState(defaultCarConfig.paint.custom?.defaultValue ?? '#7c3aed')
+  const [customRimColor, setCustomRimColor] = useState(defaultCarConfig.rims.custom?.defaultValue ?? '#8b5e3c')
+  const [addOnValues, setAddOnValues] = useState(() => getDefaultAddOnValues(defaultCarConfig))
   const [activeCustomPicker, setActiveCustomPicker] = useState<'body' | 'rim' | null>(null)
   const [sceneReady, setSceneReady] = useState(false)
-  const [wingOn, setWingOn] = useState(false)
-  const [wingAvailable, setWingAvailable] = useState(false)
   const selectedBodyOption = bodyColorOptions.find((option) => option.value === bodyColor) ?? bodyColorOptions[0]
   const selectedRimOption = rimColorOptions.find((option) => option.value === rimColor) ?? rimColorOptions[0]
   const effectiveBodyColor = selectedBodyOption.custom ? customBodyColor : selectedBodyOption.value
   const effectiveRimColor = selectedRimOption.custom ? customRimColor : selectedRimOption.value
-  const money = basePrice + selectedBodyOption.price + selectedRimOption.price + (wingOn ? wingPrice : 0)
+  const activeCustomConfig = activeCustomPicker === 'body' ? carConfig.paint.custom : carConfig.rims.custom
+  const addOnTotal = (carConfig.addOns ?? []).reduce((total, addOn) => total + (addOnValues[addOn.id] ? addOn.price ?? 0 : 0), 0)
+  const money = (carConfig.basePrice ?? 0) + selectedBodyOption.price + selectedRimOption.price + addOnTotal
   const [displayMoney, setDisplayMoney] = useState(money)
   const [priceDirection, setPriceDirection] = useState<'up' | 'down' | 'idle'>('idle')
 
-  const setColor = (objectName: 'Body_Car' | 'Rim_Car', color: string) => {
-    const app = splineRef.current
-    if (!app) return
-
-    try {
-      app.getAllObjects()
-        .filter((object) => object.name === objectName)
-        .forEach((object) => {
-          object.color = color
-        })
-    } catch (err) {
-      console.warn(`${objectName} color update failed`, err)
-    }
-
-    app.requestRender?.()
+  const selectCarForBuilder = (carId: string) => {
+    navigate(`/cars/${encodeURIComponent(carId)}`)
   }
 
-  const getWingObjects = (app = splineRef.current) => {
-    if (!app) return []
-
-    const allObjects = app.getAllObjects()
-    const wingObjects = allObjects.filter((object) => wingObjectNames.includes(object.name))
-    const fallbackObjects = wingObjectNames
-      .map((objectName) => app.findObjectByName(objectName))
-      .filter((object): object is SPEObject => Boolean(object))
-
-    return [...wingObjects, ...fallbackObjects].filter(
-      (object, index, objects) => objects.findIndex((item) => item.uuid === object.uuid) === index,
-    )
+  const toggleAddOn = (addOnId: string) => {
+    setAddOnValues((currentValues) => ({
+      ...currentValues,
+      [addOnId]: !currentValues[addOnId],
+    }))
   }
 
-  const setWingVisibility = (visible: boolean, app = splineRef.current) => {
-    const wingObjects = getWingObjects(app)
-
-    wingObjectsRef.current = wingObjects
-    setWingAvailable(wingObjects.length > 0)
-
-    wingObjects.forEach((object) => {
-      if (visible) {
-        object.show()
-        return
-      }
-
-      object.hide()
-    })
-
-    app?.requestRender?.()
-  }
-
-  const toggleWing = () => {
-    const wingObjects = wingObjectsRef.current.length > 0 ? wingObjectsRef.current : getWingObjects()
-
-    if (wingObjects.length === 0) {
-      setWingAvailable(false)
-      console.warn(`Wing objects were not found in the Spline scene. Tried: ${wingObjectNames.join(', ')}`)
-      return
-    }
-
-    const nextWingOn = !wingOn
-
-    wingObjectsRef.current = wingObjects
-    setWingOn(nextWingOn)
-    setWingVisibility(nextWingOn)
-  }
+  const handleSceneReady = useCallback(() => {
+    setSceneReady(true)
+  }, [])
 
   const selectBodyColor = (option: ColorOption) => {
     setBodyColor(option.value)
 
     if (option.custom) {
       setActiveCustomPicker('body')
-      setColor('Body_Car', customBodyColor)
       return
     }
 
     setActiveCustomPicker(null)
-    setColor('Body_Car', option.value)
   }
+
+  useEffect(() => {
+    setSceneReady(false)
+    setBodyColor(getDefaultColorValue(carConfig.paint))
+    setRimColor(getDefaultColorValue(carConfig.rims))
+    setCustomBodyColor(carConfig.paint.custom?.defaultValue ?? '#7c3aed')
+    setCustomRimColor(carConfig.rims.custom?.defaultValue ?? '#8b5e3c')
+    setAddOnValues(getDefaultAddOnValues(carConfig))
+    setActiveCustomPicker(null)
+  }, [carConfig])
 
   const selectRimColor = (option: ColorOption) => {
     setRimColor(option.value)
 
     if (option.custom) {
       setActiveCustomPicker('rim')
-      setColor('Rim_Car', customRimColor)
       return
     }
 
     setActiveCustomPicker(null)
-    setColor('Rim_Car', option.value)
   }
 
   useEffect(() => {
@@ -262,18 +304,6 @@ function StartPage() {
   }, [money])
 
   useEffect(() => {
-    if (selectedBodyOption.custom) {
-      setColor('Body_Car', customBodyColor)
-    }
-  }, [customBodyColor, selectedBodyOption.custom])
-
-  useEffect(() => {
-    if (selectedRimOption.custom) {
-      setColor('Rim_Car', customRimColor)
-    }
-  }, [customRimColor, selectedRimOption.custom])
-
-  useEffect(() => {
     if (!activeCustomPicker) {
       return
     }
@@ -293,6 +323,10 @@ function StartPage() {
     }
   }, [activeCustomPicker])
 
+  if (!carId) {
+    return <CarSelectPage onSelectCar={selectCarForBuilder} selectedCarId={selectedCarId} />
+  }
+
   return (
     <main className="min-h-svh overflow-x-hidden bg-[#f1d733] text-[#111]">
       <section className="relative min-h-svh px-[3vw] pt-[18px] pb-[34px] max-[820px]:flex max-[820px]:flex-col max-[820px]:gap-5 max-[820px]:px-4 max-[820px]:pt-4 max-[820px]:pb-8" id="model">
@@ -303,16 +337,13 @@ function StartPage() {
             </div>
           )}
 
-          <Spline
-            className="relative z-20 h-full w-full"
-            scene="https://prod.spline.design/JXjoDAPatAlM7VoV/scene.splinecode"
-            onLoad={(app) => {
-              splineRef.current = app
-              setSceneReady(true)
-              setWingVisibility(wingOn, app)
-              setColor('Body_Car', effectiveBodyColor)
-              setColor('Rim_Car', effectiveRimColor)
-            }}
+          <CarScene
+            addOnValues={addOnValues}
+            carColor={effectiveBodyColor}
+            carConfig={carConfig}
+            key={carConfig.id}
+            onReady={handleSceneReady}
+            rimColor={effectiveRimColor}
           />
 
           <div className="absolute bottom-5 left-[22px] z-30 flex items-center gap-[10px] text-[9px] font-semibold tracking-[0.1em] text-[#56524b] uppercase max-[820px]:bottom-3 max-[820px]:left-3">
@@ -338,39 +369,71 @@ function StartPage() {
             <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-[#e22e1d]">Price </p>
               <p className={`price-counter mt-1 text-[28px] leading-none font-black tracking-[-0.06em] max-[420px]:text-[23px] ${priceDirection === 'up' ? 'price-counter-up' : ''} ${priceDirection === 'down' ? 'price-counter-down' : ''}`}>{formatPrice(displayMoney)} kr</p>
             </div>
-            <p className="mt-1 text-[10px] text-[#5f5a52] max-[820px]:mb-1 max-[820px]:text-right">Base price {formatPrice(basePrice)} kr</p>
+            <p className="mt-1 text-[10px] text-[#5f5a52] max-[820px]:mb-1 max-[820px]:text-right">Base price {formatPrice(carConfig.basePrice ?? 0)} kr</p>
           </div>
+          <button
+            className="mb-4 w-full cursor-pointer border-2 border-[#111] bg-white px-3 py-2 text-[10px] font-black tracking-[0.12em] uppercase shadow-[3px_3px_0_#111] transition-transform hover:-translate-y-0.5"
+            onClick={() => navigate('/')}
+            type="button"
+          >
+            Choose another car
+          </button>
+          {carConfigs.length > 1 && (
+            <label className="mb-4 block border-b-2 border-[#111] pb-4 text-[10px] font-bold uppercase tracking-[0.12em] text-[#3e3c34]">
+              Car
+              <select
+                className="mt-2 w-full cursor-pointer border-[3px] border-[#111] bg-[#f6f0e4] px-3 py-2 text-[12px] font-black uppercase shadow-[4px_4px_0_#111]"
+                onChange={(event) => navigate(`/cars/${encodeURIComponent(event.target.value)}`)}
+                value={selectedCarId}
+              >
+                {carConfigs.map((config) => (
+                  <option key={config.id} value={config.id}>
+                    {config.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <ColorField
-            label="Body Color"
+            label={carConfig.paint.label ?? 'Body Color'}
             options={bodyColorOptions}
             value={bodyColor}
             onChange={selectBodyColor}
             getOptionColor={(option) => option.custom ? customBodyColor : option.value}
           />
           <ColorField
-            label="Rim Color"
+            label={carConfig.rims.label ?? 'Rim Color'}
             options={rimColorOptions}
             value={rimColor}
             onChange={selectRimColor}
             getOptionColor={(option) => option.custom ? customRimColor : option.value}
           />
 
-          <div className="mt-2 border-t-2 border-[#111] pt-2">
-            <button
-              className="flex w-full cursor-pointer items-center justify-between gap-4 border-[3px] border-[#111] bg-[#ff3b24] px-4 py-3 text-left text-[12px] font-black tracking-[-0.02em] uppercase shadow-[5px_5px_0_#111] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-[#d8d1c3] disabled:text-[#777] disabled:hover:translate-y-0 max-[420px]:px-3"
-              disabled={!sceneReady}
-              onClick={toggleWing}
-              type="button"
-            >
-              <span className="min-w-0">
-                <span className="block">{wingOn ? 'Remove wing' : 'Add wing'}</span>
-                <span className="mt-1 block text-[10px] leading-none font-bold tracking-normal normal-case">
-                  {wingOn ? 'Wing active' : ` ${formatPrice(wingPrice)} kr`}
-                </span>
-              </span>
-              <span className="shrink-0 text-[10px] font-bold">{wingOn ? 'ON' : 'OFF'}</span>
-            </button>
-          </div>
+          {(carConfig.addOns ?? []).length > 0 && (
+            <div className="mt-2 grid gap-3 border-t-2 border-[#111] pt-2">
+              {(carConfig.addOns ?? []).map((addOn) => {
+                const isEnabled = Boolean(addOnValues[addOn.id])
+
+                return (
+                  <button
+                    className="flex w-full cursor-pointer items-center justify-between gap-4 border-[3px] border-[#111] bg-[#ff3b24] px-4 py-3 text-left text-[12px] font-black tracking-[-0.02em] uppercase shadow-[5px_5px_0_#111] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-[#d8d1c3] disabled:text-[#777] disabled:hover:translate-y-0 max-[420px]:px-3"
+                    disabled={!sceneReady}
+                    key={addOn.id}
+                    onClick={() => toggleAddOn(addOn.id)}
+                    type="button"
+                  >
+                    <span className="min-w-0">
+                      <span className="block">{isEnabled ? addOn.removeLabel ?? `Remove ${addOn.name}` : addOn.addLabel ?? `Add ${addOn.name}`}</span>
+                      <span className="mt-1 block text-[10px] leading-none font-bold tracking-normal normal-case">
+                        {isEnabled ? addOn.activeLabel ?? `${addOn.name} active` : ` ${formatPrice(addOn.price ?? 0)} kr`}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-[10px] font-bold">{isEnabled ? 'ON' : 'OFF'}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
           {activeCustomPicker && (
             <div
@@ -415,7 +478,7 @@ function StartPage() {
                     {activeCustomPicker === 'body' ? 'Custom body color' : 'Custom rim color'}
                   </p>
                   <p className="mt-1 text-[10px] text-[#5f5a52]">
-                    Adds {formatPrice(activeCustomPicker === 'body' ? 30000 : 18000)} kr
+                    Adds {formatPrice(activeCustomConfig?.price ?? 0)} kr
                   </p>
                   <p className="mt-2 text-[12px] font-semibold">
                     {(activeCustomPicker === 'body' ? customBodyColor : customRimColor).toUpperCase()}
