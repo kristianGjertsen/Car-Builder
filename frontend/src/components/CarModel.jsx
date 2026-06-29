@@ -134,7 +134,11 @@ function CarModel({
   addOnValues = {},
   carColor,
   carConfig,
+  caliperColor,
+  caliperMaterial,
+  paintMaterial,
   rimColor = '#0d0d0f',
+  rimMaterial: selectedRimMaterial,
   rimType = 'standard',
   rotation = [0, -Math.PI / 5, 0],
   onLoaded,
@@ -159,11 +163,12 @@ function CarModel({
     return clonedScene
   }, [gltfScene])
 
-  const paintMaterialConfig = useMemo(() => carConfig.paint?.material ?? {}, [carConfig.paint])
+  const paintMaterialConfig = useMemo(() => paintMaterial ?? carConfig.paint?.material ?? {}, [carConfig.paint, paintMaterial])
+  const caliperMaterialConfig = useMemo(() => caliperMaterial ?? carConfig.calipers?.material ?? {}, [caliperMaterial, carConfig.calipers])
 
   const rimMaterial = useMemo(
     () => {
-      const rimMaterialConfig = carConfig.rims?.material ?? {}
+      const rimMaterialConfig = selectedRimMaterial ?? carConfig.rims?.material ?? {}
 
       return new THREE.MeshStandardMaterial({
         color: rimColor,
@@ -173,13 +178,14 @@ function CarModel({
         side: THREE.DoubleSide,
       })
     },
-    [carConfig.rims, rimColor, rimType],
+    [carConfig.rims, rimColor, rimType, selectedRimMaterial],
   )
 
   useEffect(() => {
     const missing = {
       body: true,
       rims: true,
+      calipers: !carConfig.calipers,
     }
     const missingAddOns = Object.fromEntries((carConfig.addOns ?? []).map((addOn) => [addOn.id, true]))
 
@@ -199,6 +205,9 @@ function CarModel({
       const isRim =
         object.userData[carBuilderPartKey] === 'rims' ||
         matchesConfigPart(object, carConfig.rims)
+      const isCaliper =
+        object.userData[carBuilderPartKey] === 'calipers' ||
+        matchesConfigPart(object, carConfig.calipers)
 
       if (isBody) {
         object.userData[carBuilderPartKey] = 'body'
@@ -210,6 +219,12 @@ function CarModel({
         object.userData[carBuilderPartKey] = 'rims'
         object.material = rimMaterial
         missing.rims = false
+      }
+
+      if (isCaliper) {
+        object.userData[carBuilderPartKey] = 'calipers'
+        object.material = createColoredMaterial(getOriginalMaterial(object), caliperColor, caliperMaterialConfig)
+        missing.calipers = false
       }
 
       ;(carConfig.addOns ?? []).forEach((addOn) => {
@@ -237,7 +252,7 @@ function CarModel({
         console.warn(`CarModel: ${addOn.name} add-on mesh was not found. Check mesh names in Blender/GLB export.`)
       }
     })
-  }, [addOnValues, carColor, carConfig, paintMaterialConfig, rimMaterial, scene])
+  }, [addOnValues, caliperColor, caliperMaterialConfig, carColor, carConfig, paintMaterialConfig, rimMaterial, scene])
 
   useEffect(() => {
     onLoaded?.()
