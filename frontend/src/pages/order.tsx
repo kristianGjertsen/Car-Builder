@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import CarScene from '../components/CarScene'
 import Header from '../components/Header'
 import OrderSummary from '../components/OrderSummary'
 import { carConfigs, defaultCarConfig } from '../cars'
@@ -36,6 +37,10 @@ function getColorOptions(colorConfig) {
       name: colorConfig.custom.name ?? 'Custom',
       value: colorConfig.custom.value,
       price: colorConfig.custom.price ?? 0,
+      material: {
+        ...(colorConfig.material ?? {}),
+        ...(colorConfig.custom.material ?? {}),
+      },
       custom: true,
     },
   ]
@@ -72,7 +77,23 @@ function OrderPage() {
   const selectedCaliperOption = hasColorConfig(carConfig.calipers)
     ? getSelectedColorOption(carConfig.calipers, savedBuild?.caliperColor)
     : null
+  const effectiveBodyColor = selectedBodyOption.custom ? savedBuild?.customBodyColor ?? selectedBodyOption.value : selectedBodyOption.value
+  const effectiveRimColor = selectedRimOption.custom ? savedBuild?.customRimColor ?? selectedRimOption.value : selectedRimOption.value
+  const effectiveCaliperColor = selectedCaliperOption?.custom ? savedBuild?.customCaliperColor ?? selectedCaliperOption.value : selectedCaliperOption?.value
+  const addOnValues = savedBuild?.addOnValues ?? {}
   const selectedAddOns = (carConfig.addOns ?? []).filter((addOn) => Boolean(savedBuild?.addOnValues?.[addOn.id]))
+  const orderScene = {
+    ...carConfig.scene,
+    cameraAngle: 18,
+    cameraHeight: 1.05,
+    zoom: 7.2,
+    fov: 45,
+    carAngle: 0,
+    target: [0, 0.15, 0],
+    intro: {
+      enabled: false,
+    },
+  }
   const orderLines = [
     {
       id: 'base',
@@ -123,6 +144,24 @@ function OrderPage() {
 
       <section className="mx-auto grid min-h-[calc(100svh-81px)] max-w-[1180px] grid-cols-[minmax(0,1fr)_390px] gap-8 px-8 py-10 max-[900px]:grid-cols-1 max-[760px]:px-4 max-[760px]:py-6">
         <div className="rounded-[3px] border border-[#dfe3e8] bg-white p-8 shadow-sm max-[760px]:p-5">
+          <div className="mb-8 h-[430px] overflow-hidden rounded-[3px] border border-[#dfe3e8] bg-[#ebe8e3] max-[760px]:h-[320px]">
+            <CarScene
+              addOnValues={addOnValues}
+              autoSpin
+              caliperColor={effectiveCaliperColor}
+              caliperMaterial={selectedCaliperOption?.material}
+              carColor={effectiveBodyColor}
+              carConfig={carConfig}
+              centerModel
+              paintMaterial={selectedBodyOption.material}
+              presentationMode
+              rimColor={effectiveRimColor}
+              rimMaterial={selectedRimOption.material}
+              sceneConfig={carConfig.orderScene ?? orderScene}
+              spinSpeed={0.09}
+            />
+          </div>
+
           <p className="text-[13px] font-semibold text-[#60656c]">Order overview</p>
           <h2 className="mt-3 max-w-[760px] text-[clamp(38px,6vw,72px)] leading-[0.96] font-normal tracking-[-0.04em]">
             Review your configuration

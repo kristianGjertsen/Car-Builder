@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
-import { ContactShadows, Environment, OrbitControls, PerspectiveCamera } from '@react-three/drei'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Center, ContactShadows, Environment, OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import { createPortal } from 'react-dom'
 import CarModel from './CarModel'
 
@@ -22,6 +22,7 @@ const fallbackSceneControls = {
     enabled: true,
     startHeight: 8,
     duration: 1200,
+    transition: 'orbit',
     useLast: false,
   },
 }
@@ -211,6 +212,61 @@ function getCameraControlsFromPosition(cameraPosition, target) {
   }
 }
 
+function getInterpolatedSceneControls(startControls, endControls, progress) {
+  const target = interpolateVector(startControls.target, endControls.target, progress)
+  const cameraPosition = interpolateVector(
+    getCameraPositionFromControls(startControls),
+    getCameraPositionFromControls(endControls),
+    progress,
+  )
+  const cameraControls = getCameraControlsFromPosition(cameraPosition, target)
+
+  return {
+    ...endControls,
+    ...cameraControls,
+    carAngle: interpolateDegrees(startControls.carAngle, endControls.carAngle, progress),
+    fov: interpolateValue(startControls.fov, endControls.fov, progress),
+    light: interpolateValue(startControls.light, endControls.light, progress),
+    shadow: interpolateValue(startControls.shadow, endControls.shadow, progress),
+    target,
+  }
+}
+
+function getZoomOutInMidpointControls(startControls, endControls) {
+  const midpointZoom = endControls.intro?.midpointZoom ?? Math.max(startControls.zoom, endControls.zoom) * 1.3
+  const midpointTarget = endControls.intro?.midpointTarget ?? fallbackSceneControls.target
+
+  return {
+    ...endControls,
+    cameraAngle: interpolateDegrees(startControls.cameraAngle, endControls.cameraAngle, 0.45),
+    cameraHeight: endControls.intro?.midpointHeight ?? Math.max(startControls.cameraHeight, endControls.cameraHeight) + 0.45,
+    carAngle: interpolateDegrees(startControls.carAngle, endControls.carAngle, 0.45),
+    fov: endControls.intro?.midpointFov ?? Math.max(startControls.fov, endControls.fov),
+    light: interpolateValue(startControls.light, endControls.light, 0.45),
+    shadow: interpolateValue(startControls.shadow, endControls.shadow, 0.45),
+    target: midpointTarget,
+    zoom: midpointZoom,
+  }
+}
+
+function getTransitionSceneControls(startControls, endControls, progress) {
+  if (endControls.intro?.transition !== 'zoom-out-in') {
+    return getInterpolatedSceneControls(startControls, endControls, easeOutCubic(progress))
+  }
+
+  const midpointControls = getZoomOutInMidpointControls(startControls, endControls)
+
+  if (progress < 0.48) {
+    return getInterpolatedSceneControls(startControls, midpointControls, easeOutCubic(progress / 0.48))
+  }
+
+  return getInterpolatedSceneControls(
+    midpointControls,
+    endControls,
+    easeOutCubic((progress - 0.48) / 0.52),
+  )
+}
+
 function formatSceneConfigForClipboard(sceneControls) {
   return `{
   cameraAngle: ${sceneControls.cameraAngle},
@@ -230,6 +286,7 @@ function formatSceneConfigForClipboard(sceneControls) {
     enabled: ${sceneControls.intro.enabled},
     startHeight: ${sceneControls.intro.startHeight},
     duration: ${sceneControls.intro.duration},
+    transition: "${sceneControls.intro.transition ?? fallbackSceneControls.intro.transition}",
     useLast: ${Boolean(sceneControls.intro.useLast)},
   },
 }`
@@ -284,11 +341,31 @@ function SceneControlSync({ controlsRef, onSync }) {
   return null
 }
 
-function CarScene({ addOnValues, caliperColor, caliperMaterial, carColor, carConfig, paintMaterial, rimColor, rimMaterial, rimType = 'standard', sceneConfig, sceneTunerTarget, usePanelSceneTuner = false, onReady }) {
+function SceneModel({ autoSpin = false, baseRotation, centerModel = false, modelProps, spinSpeed = 0.22 }) {
+  const groupRef = useRef(null)
+
+  useFrame(({ clock }) => {
+    if (!autoSpin || !groupRef.current) {
+      return
+    }
+
+    groupRef.current.rotation.y = baseRotation[1] + clock.getElapsedTime() * spinSpeed
+  })
+
+  const model = <CarModel {...modelProps} rotation={[0, 0, 0]} />
+
+  return (
+    <group ref={groupRef} rotation={baseRotation}>
+      {centerModel ? <Center>{model}</Center> : model}
+    </group>
+  )
+}
+
+function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial, carColor, carConfig, centerModel = false, paintMaterial, presentationMode = false, rimColor, rimMaterial, rimType = 'standard', sceneConfig, sceneTunerTarget, spinSpeed, usePanelSceneTuner = false, onReady }) {
   const controlsRef = useRef(null)
   const introFrameRef = useRef(null)
   const isSceneTransitioningRef = useRef(false)
-  const latestStableSceneControlsRef = useRef(null)
+  const latestSceneControlsRef = useRef(null)
   const [showTuner, setShowTuner] = useState(false)
   const [modelReady, setModelReady] = useState(false)
   const defaultSceneControls = useMemo(() => getSceneControls(sceneConfig ?? carConfig.scene), [carConfig.scene, sceneConfig])
@@ -358,7 +435,7 @@ function CarScene({ addOnValues, caliperColor, caliperMaterial, carColor, carCon
   }, [onReady])
 
   const resetSceneControls = () => {
-    latestStableSceneControlsRef.current = defaultSceneControls
+    latestSceneControlsRef.current = defaultSceneControls
     setSceneControls(defaultSceneControls)
   }
 
@@ -442,9 +519,7 @@ function CarScene({ addOnValues, caliperColor, caliperMaterial, carColor, carCon
   )
 
   useEffect(() => {
-    if (!isSceneTransitioningRef.current) {
-      latestStableSceneControlsRef.current = sceneControls
-    }
+    latestSceneControlsRef.current = sceneControls
   }, [sceneControls])
 
   useEffect(() => {
@@ -460,7 +535,7 @@ function CarScene({ addOnValues, caliperColor, caliperMaterial, carColor, carCon
 
     if (defaultSceneControls.intro?.enabled === false) {
       introFrameRef.current = requestAnimationFrame(() => {
-        latestStableSceneControlsRef.current = defaultSceneControls
+        latestSceneControlsRef.current = defaultSceneControls
         setSceneControls(defaultSceneControls)
       })
 
@@ -471,7 +546,7 @@ function CarScene({ addOnValues, caliperColor, caliperMaterial, carColor, carCon
       }
     }
 
-    const lastSceneControls = latestStableSceneControlsRef.current
+    const lastSceneControls = latestSceneControlsRef.current
     const startControls = defaultSceneControls.intro?.useLast && lastSceneControls
       ? lastSceneControls
       : {
@@ -479,37 +554,21 @@ function CarScene({ addOnValues, caliperColor, caliperMaterial, carColor, carCon
           cameraHeight: getIntroStartHeight(defaultSceneControls),
     }
     const endControls = defaultSceneControls
-    const startCameraPosition = getCameraPositionFromControls(startControls)
-    const endCameraPosition = getCameraPositionFromControls(endControls)
     const duration = defaultSceneControls.intro?.duration ?? fallbackSceneControls.intro.duration
     const startTime = performance.now()
 
     isSceneTransitioningRef.current = true
-    setSceneControls(startControls)
 
     const tick = (now) => {
       const progress = Math.min((now - startTime) / duration, 1)
-      const easedProgress = easeOutCubic(progress)
-      const target = interpolateVector(startControls.target, endControls.target, easedProgress)
-      const cameraPosition = interpolateVector(startCameraPosition, endCameraPosition, easedProgress)
-      const cameraControls = getCameraControlsFromPosition(cameraPosition, target)
-
-      setSceneControls({
-        ...endControls,
-        ...cameraControls,
-        carAngle: interpolateDegrees(startControls.carAngle, endControls.carAngle, easedProgress),
-        fov: interpolateValue(startControls.fov, endControls.fov, easedProgress),
-        light: interpolateValue(startControls.light, endControls.light, easedProgress),
-        shadow: interpolateValue(startControls.shadow, endControls.shadow, easedProgress),
-        target,
-      })
+      setSceneControls(getTransitionSceneControls(startControls, endControls, progress))
 
       if (progress < 1) {
         introFrameRef.current = requestAnimationFrame(tick)
         return
       }
 
-      latestStableSceneControlsRef.current = endControls
+      latestSceneControlsRef.current = endControls
       isSceneTransitioningRef.current = false
       setSceneControls(endControls)
     }
@@ -540,40 +599,49 @@ function CarScene({ addOnValues, caliperColor, caliperMaterial, carColor, carCon
         <spotLight angle={0.45} intensity={1.8} penumbra={0.7} position={[-4, 5, 5]} />
 
         <Suspense fallback={null}>
-          <CarModel
-            addOnValues={addOnValues}
-            caliperColor={caliperColor}
-            caliperMaterial={caliperMaterial}
-            carColor={carColor}
-            carConfig={carConfig}
+          <SceneModel
+            autoSpin={autoSpin}
+            baseRotation={carRotation}
+            centerModel={centerModel}
             key={carConfig.modelId}
-            onLoaded={handleModelLoaded}
-            paintMaterial={paintMaterial}
-            rimColor={rimColor}
-            rimMaterial={rimMaterial}
-            rimType={rimType}
-            rotation={carRotation}
+            modelProps={{
+              addOnValues,
+              caliperColor,
+              caliperMaterial,
+              carColor,
+              carConfig,
+              onLoaded: handleModelLoaded,
+              paintMaterial,
+              rimColor,
+              rimMaterial,
+              rimType,
+            }}
+            spinSpeed={spinSpeed}
           />
           <Environment preset="city" />
           <ContactShadows blur={2.6} far={6} opacity={sceneControls.shadow} position={[0, -0.76, 0]} scale={8} />
         </Suspense>
 
-        <OrbitControls
-          ref={controlsRef}
-          enableDamping
-          enablePan={false}
-          minDistance={sceneControls.minDistance}
-          maxDistance={sceneControls.maxDistance}
-          maxAzimuthAngle={orbitLimits.maxAzimuthAngle}
-          maxPolarAngle={orbitLimits.maxPolarAngle}
-          minAzimuthAngle={orbitLimits.minAzimuthAngle}
-          minPolarAngle={orbitLimits.minPolarAngle}
-          target={sceneControls.target}
-        />
-        <SceneControlSync controlsRef={controlsRef} onSync={syncSceneControlsFromOrbit} />
+        {!presentationMode && (
+          <>
+            <OrbitControls
+              ref={controlsRef}
+              enableDamping
+              enablePan={false}
+              minDistance={sceneControls.minDistance}
+              maxDistance={sceneControls.maxDistance}
+              maxAzimuthAngle={orbitLimits.maxAzimuthAngle}
+              maxPolarAngle={orbitLimits.maxPolarAngle}
+              minAzimuthAngle={orbitLimits.minAzimuthAngle}
+              minPolarAngle={orbitLimits.minPolarAngle}
+              target={sceneControls.target}
+            />
+            <SceneControlSync controlsRef={controlsRef} onSync={syncSceneControlsFromOrbit} />
+          </>
+        )}
       </Canvas>
 
-      {sceneTunerTarget ? createPortal(sceneTuner, sceneTunerTarget) : !usePanelSceneTuner ? sceneTuner : null}
+      {!presentationMode && (sceneTunerTarget ? createPortal(sceneTuner, sceneTunerTarget) : !usePanelSceneTuner ? sceneTuner : null)}
     </>
   )
 }

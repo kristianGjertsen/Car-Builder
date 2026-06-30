@@ -56,21 +56,22 @@ const bmwX7M60iConfig = {
         type: "rims",
         label: "Rim Color",
         scene: {
-          cameraAngle: 52,
-          cameraHeight: 0.65,
-          zoom: 4.2,
-          fov: 46,
-          carAngle: -34,
+          cameraAngle: 90,
+          cameraHeight: 0.22,
+          zoom: 5.34,
+          fov: 50,
+          carAngle: 0,
           maxRotationX: 90,
           maxRotationY: 180,
           light: 0.6,
           shadow: 0.8,
           background: "#ffffff",
-          target: [0.9, -0.12, 0],
+          target: [0, 0, 0],
           minDistance: 0,
           maxDistance: 28,
           intro: {
             enabled: true,
+            startHeight: 8,
             duration: 850,
             useLast: true,
           },
@@ -79,15 +80,10 @@ const bmwX7M60iConfig = {
     ],
   },
 
-
-
-  
-
   paint: {
     label: "Body Color",
     defaultValue: "Dravit Grey",
 
-    // Actual material names found in x72.glb
     meshNames: [],
     materialNames: ["inmx7m60i_body", "bodyshell.6", "f_bump1.5"],
     keywords: [],
