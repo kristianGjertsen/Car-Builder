@@ -1,6 +1,10 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Center, ContactShadows, Environment, OrbitControls, PerspectiveCamera } from '@react-three/drei'
+import { Center } from '@react-three/drei/core/Center'
+import { ContactShadows } from '@react-three/drei/core/ContactShadows'
+import { Environment } from '@react-three/drei/core/Environment'
+import { OrbitControls } from '@react-three/drei/core/OrbitControls'
+import { PerspectiveCamera } from '@react-three/drei/core/PerspectiveCamera'
 import { createPortal } from 'react-dom'
 import CarModel from './CarModel'
 

@@ -1,7 +1,7 @@
 const bmwX7M60iConfig = {
   id: "BMW X7 M60i",
   name: "BMW X7 M60i",
-  basePrice: 730000,
+  basePrice: 970000,
 
   scene: {
     cameraAngle: 12,

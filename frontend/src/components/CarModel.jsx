@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
-import { useGLTF } from '@react-three/drei'
+import { useGLTF } from '@react-three/drei/core/Gltf'
 
 const carBuilderPartKey = 'carBuilderPart'
 const reservedNodeNameCharacters = /[[\].:/]/g

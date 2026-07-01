@@ -1,7 +1,7 @@
 const mazdaRx7Config = {
   id: "2024 BMW M4 Coupe Competition",
   name: "2024 BMW M4 Coupe Competition",
-  basePrice: 730000,
+  basePrice: 830000,
 
   scene: {
     cameraAngle: 12,

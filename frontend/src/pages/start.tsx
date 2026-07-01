@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Header from '../components/Header'
-import CarScene from '../components/CarScene'
 import OrderSummary from '../components/OrderSummary'
 import { carConfigs, defaultCarConfig } from '../cars'
 import { resolveColorOptions } from '../cars/colors'
+
+const CarScene = lazy(() => import('../components/CarScene'))
 
 type ColorOption = {
   name: string
@@ -644,21 +645,23 @@ function StartPage() {
 
         <div className="min-w-0 max-[980px]:order-1">
           <div className="relative h-[calc(100svh-214px)] min-h-[520px] overflow-hidden rounded-[22px] border border-[#dfe3e8] bg-[#ebe8e3] shadow-sm max-[980px]:h-[54svh] max-[980px]:min-h-[360px] max-[520px]:min-h-[300px]">
-            <CarScene
-              addOnValues={addOnValues}
-              caliperMaterial={selectedCaliperOption?.material}
-              caliperColor={effectiveCaliperColor}
-              carColor={effectiveBodyColor}
-              carConfig={carConfig}
-              key={carConfig.id}
-              onReady={handleSceneReady}
-              paintMaterial={selectedBodyOption.material}
-              rimColor={effectiveRimColor}
-              rimMaterial={selectedRimOption.material}
-              sceneConfig={activeStep?.scene ?? carConfig.scene}
-              sceneTunerTarget={sceneTunerTarget}
-              usePanelSceneTuner
-            />
+            <Suspense fallback={<SceneLoadingPanel />}>
+              <CarScene
+                addOnValues={addOnValues}
+                caliperMaterial={selectedCaliperOption?.material}
+                caliperColor={effectiveCaliperColor}
+                carColor={effectiveBodyColor}
+                carConfig={carConfig}
+                key={carConfig.id}
+                onReady={handleSceneReady}
+                paintMaterial={selectedBodyOption.material}
+                rimColor={effectiveRimColor}
+                rimMaterial={selectedRimOption.material}
+                sceneConfig={activeStep?.scene ?? carConfig.scene}
+                sceneTunerTarget={sceneTunerTarget}
+                usePanelSceneTuner
+              />
+            </Suspense>
 
             <div className="absolute bottom-5 left-5 z-30 flex items-center gap-3 rounded-full bg-white/90 px-3 py-2 text-[12px] font-semibold text-[#60656c] shadow-sm backdrop-blur">
               <span className="grid h-8 w-8 place-items-center rounded-full bg-[#1f2328] text-[10px] text-white">360</span>
@@ -839,6 +842,17 @@ function StartPage() {
         </aside>
       </section>
     </main>
+  )
+}
+
+function SceneLoadingPanel() {
+  return (
+    <div className="grid h-full w-full place-items-center text-center">
+      <div>
+        <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#60656c]">Loading scene</p>
+        <p className="mt-2 text-[14px] text-[#1f2328]">Preparing the 3D configurator.</p>
+      </div>
+    </div>
   )
 }
 

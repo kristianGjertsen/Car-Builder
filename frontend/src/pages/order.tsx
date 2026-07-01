@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { Suspense, lazy, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import CarScene from '../components/CarScene'
 import Header from '../components/Header'
 import OrderSummary from '../components/OrderSummary'
 import { carConfigs, defaultCarConfig } from '../cars'
 import { resolveColorOptions } from '../cars/colors'
+
+const CarScene = lazy(() => import('../components/CarScene'))
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('nb-NO').format(price)
@@ -145,21 +146,23 @@ function OrderPage() {
       <section className="mx-auto grid min-h-[calc(100svh-81px)] max-w-[1180px] grid-cols-[minmax(0,1fr)_390px] gap-8 px-8 py-10 max-[900px]:grid-cols-1 max-[760px]:px-4 max-[760px]:py-6">
         <div className="rounded-[3px] border border-[#dfe3e8] bg-white p-8 shadow-sm max-[760px]:p-5">
           <div className="mb-8 h-[430px] overflow-hidden rounded-[3px] border border-[#dfe3e8] bg-[#ebe8e3] max-[760px]:h-[320px]">
-            <CarScene
-              addOnValues={addOnValues}
-              autoSpin
-              caliperColor={effectiveCaliperColor}
-              caliperMaterial={selectedCaliperOption?.material}
-              carColor={effectiveBodyColor}
-              carConfig={carConfig}
-              centerModel
-              paintMaterial={selectedBodyOption.material}
-              presentationMode
-              rimColor={effectiveRimColor}
-              rimMaterial={selectedRimOption.material}
-              sceneConfig={carConfig.orderScene ?? orderScene}
-              spinSpeed={0.09}
-            />
+            <Suspense fallback={<SceneLoadingPanel />}>
+              <CarScene
+                addOnValues={addOnValues}
+                autoSpin
+                caliperColor={effectiveCaliperColor}
+                caliperMaterial={selectedCaliperOption?.material}
+                carColor={effectiveBodyColor}
+                carConfig={carConfig}
+                centerModel
+                paintMaterial={selectedBodyOption.material}
+                presentationMode
+                rimColor={effectiveRimColor}
+                rimMaterial={selectedRimOption.material}
+                sceneConfig={carConfig.orderScene ?? orderScene}
+                spinSpeed={0.09}
+              />
+            </Suspense>
           </div>
 
           <p className="text-[13px] font-semibold text-[#60656c]">Order overview</p>
@@ -201,6 +204,17 @@ function OrderPage() {
         </aside>
       </section>
     </main>
+  )
+}
+
+function SceneLoadingPanel() {
+  return (
+    <div className="grid h-full w-full place-items-center text-center">
+      <div>
+        <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#60656c]">Loading scene</p>
+        <p className="mt-2 text-[14px] text-[#1f2328]">Preparing the 3D preview.</p>
+      </div>
+    </div>
   )
 }
 
