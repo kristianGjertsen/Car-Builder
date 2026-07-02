@@ -47,6 +47,7 @@ const bmwX7M60iConfig = {
           intro: {
             enabled: true,
             startHeight: 8,
+            useLast: true,
             duration: 1200,
           },
         },

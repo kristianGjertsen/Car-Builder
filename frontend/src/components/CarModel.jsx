@@ -137,6 +137,8 @@ function CarModel({
   caliperColor,
   caliperMaterial,
   paintMaterial,
+  seatOuterColor,
+  seatOuterMaterial,
   rimColor = '#0d0d0f',
   rimMaterial: selectedRimMaterial,
   rimType = 'standard',
@@ -165,6 +167,7 @@ function CarModel({
 
   const paintMaterialConfig = useMemo(() => paintMaterial ?? carConfig.paint?.material ?? {}, [carConfig.paint, paintMaterial])
   const caliperMaterialConfig = useMemo(() => caliperMaterial ?? carConfig.calipers?.material ?? {}, [caliperMaterial, carConfig.calipers])
+  const seatOuterMaterialConfig = useMemo(() => seatOuterMaterial ?? carConfig.seatOuter?.material ?? {}, [carConfig.seatOuter, seatOuterMaterial])
 
   const rimMaterial = useMemo(
     () => {
@@ -186,6 +189,7 @@ function CarModel({
       body: true,
       rims: true,
       calipers: !carConfig.calipers,
+      seatOuter: !carConfig.seatOuter,
     }
     const missingAddOns = Object.fromEntries((carConfig.addOns ?? []).map((addOn) => [addOn.id, true]))
 
@@ -208,6 +212,9 @@ function CarModel({
       const isCaliper =
         object.userData[carBuilderPartKey] === 'calipers' ||
         matchesConfigPart(object, carConfig.calipers)
+      const isSeatOuter =
+        object.userData[carBuilderPartKey] === 'seatOuter' ||
+        matchesConfigPart(object, carConfig.seatOuter)
 
       if (isBody) {
         object.userData[carBuilderPartKey] = 'body'
@@ -225,6 +232,12 @@ function CarModel({
         object.userData[carBuilderPartKey] = 'calipers'
         object.material = createColoredMaterial(getOriginalMaterial(object), caliperColor, caliperMaterialConfig)
         missing.calipers = false
+      }
+
+      if (isSeatOuter) {
+        object.userData[carBuilderPartKey] = 'seatOuter'
+        object.material = createColoredMaterial(getOriginalMaterial(object), seatOuterColor, seatOuterMaterialConfig)
+        missing.seatOuter = false
       }
 
       ;(carConfig.addOns ?? []).forEach((addOn) => {
@@ -252,7 +265,7 @@ function CarModel({
         console.warn(`CarModel: ${addOn.name} add-on mesh was not found. Check mesh names in Blender/GLB export.`)
       }
     })
-  }, [addOnValues, caliperColor, caliperMaterialConfig, carColor, carConfig, paintMaterialConfig, rimMaterial, scene])
+  }, [addOnValues, caliperColor, caliperMaterialConfig, carColor, carConfig, paintMaterialConfig, rimMaterial, scene, seatOuterColor, seatOuterMaterialConfig])
 
   useEffect(() => {
     onLoaded?.()

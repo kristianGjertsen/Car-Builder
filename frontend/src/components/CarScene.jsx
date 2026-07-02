@@ -93,7 +93,39 @@ function clampValue(value, min, max) {
   return Math.min(Math.max(value, min), max)
 }
 
+function roundZoomBound(value) {
+  return Math.round(value * 100) / 100
+}
+
+function hasExplicitZoomBounds(sceneControls) {
+  const minDistance = sceneControls.minDistance ?? fallbackSceneControls.minDistance
+  const maxDistance = sceneControls.maxDistance ?? fallbackSceneControls.maxDistance
+
+  return minDistance > fallbackSceneControls.minDistance || maxDistance < fallbackSceneControls.maxDistance
+}
+
+function getAdaptiveZoomBounds(sceneControls) {
+  const baseZoom = Math.max(sceneControls.zoom ?? fallbackSceneControls.zoom, 0.1)
+  const fov = sceneControls.fov ?? fallbackSceneControls.fov
+  const rotationX = sceneControls.maxRotationX ?? fallbackSceneControls.maxRotationX
+  const rotationY = sceneControls.maxRotationY ?? fallbackSceneControls.maxRotationY
+  const rotationFreedom = ((rotationX / fallbackSceneControls.maxRotationX) + (rotationY / fallbackSceneControls.maxRotationY)) / 2
+  const broadViewFactor = clampValue(rotationFreedom, 0, 1)
+  const narrowFovFactor = clampValue((fallbackSceneControls.fov - fov) / 30, 0, 1)
+  const detailFactor = Math.max(1 - broadViewFactor, narrowFovFactor)
+  const minMultiplier = 0.72 + detailFactor * 0.18
+  const maxMultiplier = 1.8 - detailFactor * 0.52
+  const min = Math.max(roundZoomBound(baseZoom * minMultiplier), 0.1)
+  const max = Math.max(roundZoomBound(baseZoom * maxMultiplier), min + 0.1)
+
+  return { max, min }
+}
+
 function getZoomBounds(sceneControls) {
+  if (!hasExplicitZoomBounds(sceneControls)) {
+    return getAdaptiveZoomBounds(sceneControls)
+  }
+
   const min = Math.max(sceneControls.minDistance ?? 0, 0.1)
   const max = Math.max(sceneControls.maxDistance ?? min + 1, min + 0.1)
 
@@ -236,39 +268,8 @@ function getInterpolatedSceneControls(startControls, endControls, progress) {
   }
 }
 
-function getZoomOutInMidpointControls(startControls, endControls) {
-  const midpointZoom = endControls.intro?.midpointZoom ?? Math.max(startControls.zoom, endControls.zoom) * 1.3
-  const midpointTarget = endControls.intro?.midpointTarget ?? fallbackSceneControls.target
-
-  return {
-    ...endControls,
-    cameraAngle: interpolateDegrees(startControls.cameraAngle, endControls.cameraAngle, 0.45),
-    cameraHeight: endControls.intro?.midpointHeight ?? Math.max(startControls.cameraHeight, endControls.cameraHeight) + 0.45,
-    carAngle: interpolateDegrees(startControls.carAngle, endControls.carAngle, 0.45),
-    fov: endControls.intro?.midpointFov ?? Math.max(startControls.fov, endControls.fov),
-    light: interpolateValue(startControls.light, endControls.light, 0.45),
-    shadow: interpolateValue(startControls.shadow, endControls.shadow, 0.45),
-    target: midpointTarget,
-    zoom: midpointZoom,
-  }
-}
-
 function getTransitionSceneControls(startControls, endControls, progress) {
-  if (endControls.intro?.transition !== 'zoom-out-in') {
-    return getInterpolatedSceneControls(startControls, endControls, easeOutCubic(progress))
-  }
-
-  const midpointControls = getZoomOutInMidpointControls(startControls, endControls)
-
-  if (progress < 0.48) {
-    return getInterpolatedSceneControls(startControls, midpointControls, easeOutCubic(progress / 0.48))
-  }
-
-  return getInterpolatedSceneControls(
-    midpointControls,
-    endControls,
-    easeOutCubic((progress - 0.48) / 0.52),
-  )
+  return getInterpolatedSceneControls(startControls, endControls, easeOutCubic(progress))
 }
 
 function formatSceneConfigForClipboard(sceneControls) {
@@ -347,25 +348,40 @@ function SceneControlSync({ controlsRef, onSync }) {
 
 function SceneModel({ autoSpin = false, baseRotation, centerModel = false, modelProps, spinSpeed = 0.22 }) {
   const groupRef = useRef(null)
+  const spinRotationRef = useRef(baseRotation[1])
 
-  useFrame(({ clock }) => {
-    if (!autoSpin || !groupRef.current) {
+  useEffect(() => {
+    spinRotationRef.current = baseRotation[1]
+
+    if (groupRef.current) {
+      groupRef.current.rotation.y = baseRotation[1]
+    }
+  }, [baseRotation])
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) {
       return
     }
 
-    groupRef.current.rotation.y = baseRotation[1] + clock.getElapsedTime() * spinSpeed
+    if (!autoSpin) {
+      groupRef.current.rotation.y = baseRotation[1]
+      return
+    }
+
+    spinRotationRef.current += delta * spinSpeed
+    groupRef.current.rotation.y = spinRotationRef.current
   })
 
   const model = <CarModel {...modelProps} rotation={[0, 0, 0]} />
 
   return (
     <group ref={groupRef} rotation={baseRotation}>
-      {centerModel ? <Center>{model}</Center> : model}
+      {centerModel ? <Center disableY>{model}</Center> : model}
     </group>
   )
 }
 
-function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial, carColor, carConfig, centerModel = false, paintMaterial, presentationMode = false, rimColor, rimMaterial, rimType = 'standard', sceneConfig, sceneTunerTarget, spinSpeed, usePanelSceneTuner = false, onReady }) {
+function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial, carColor, carConfig, centerModel = false, paintMaterial, presentationMode = false, rimColor, rimMaterial, rimType = 'standard', sceneConfig, sceneTunerTarget, seatOuterColor, seatOuterMaterial, spinSpeed, usePanelSceneTuner = false, onReady }) {
   const controlsRef = useRef(null)
   const introFrameRef = useRef(null)
   const isSceneTransitioningRef = useRef(false)
@@ -374,6 +390,7 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
   const [modelReady, setModelReady] = useState(false)
   const defaultSceneControls = useMemo(() => getSceneControls(sceneConfig ?? carConfig.scene), [carConfig.scene, sceneConfig])
   const [sceneControls, setSceneControls] = useState(() => getInitialSceneControls(defaultSceneControls))
+  const zoomBounds = useMemo(() => getZoomBounds(sceneControls), [sceneControls])
   const carRotation = useMemo(() => [0, (sceneControls.carAngle * Math.PI) / 180, 0], [sceneControls.carAngle])
   const cameraPosition = useMemo(() => getCameraPositionFromControls(sceneControls), [sceneControls])
   const orbitLimits = useMemo(() => {
@@ -485,7 +502,7 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
           <SliderControl label="Cam angle" max={180} min={-180} onChange={updateSceneControl('cameraAngle')} suffix="°" value={sceneControls.cameraAngle} />
           <ZoomSliderControl onChange={updateSceneControl('zoom')} sceneControls={sceneControls} />
           <SliderControl label="Height" max={12} min={-6} onChange={updateSceneControl('cameraHeight')} step={0.1} value={sceneControls.cameraHeight} />
-          <SliderControl label="FOV" max={85} min={20} onChange={updateSceneControl('fov')} suffix="°" value={sceneControls.fov} />
+          <SliderControl label="FOV" max={120} min={20} onChange={updateSceneControl('fov')} suffix="°" value={sceneControls.fov} />
           <SliderControl label="Car angle" max={180} min={-180} onChange={updateSceneControl('carAngle')} suffix="°" value={sceneControls.carAngle} />
           <SliderControl label="Max rot X" max={90} min={0} onChange={updateSceneControl('maxRotationX')} suffix="°" value={sceneControls.maxRotationX} />
           <SliderControl label="Max rot Y" max={180} min={0} onChange={updateSceneControl('maxRotationY')} suffix="°" value={sceneControls.maxRotationY} />
@@ -525,6 +542,21 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
   useEffect(() => {
     latestSceneControlsRef.current = sceneControls
   }, [sceneControls])
+
+  useEffect(() => {
+    setSceneControls((currentControls) => {
+      const nextZoom = roundSceneValue(clampValue(currentControls.zoom, zoomBounds.min, zoomBounds.max))
+
+      if (nextZoom === currentControls.zoom) {
+        return currentControls
+      }
+
+      return {
+        ...currentControls,
+        zoom: nextZoom,
+      }
+    })
+  }, [zoomBounds.max, zoomBounds.min])
 
   useEffect(() => {
     if (introFrameRef.current) {
@@ -619,6 +651,8 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
               rimColor,
               rimMaterial,
               rimType,
+              seatOuterColor,
+              seatOuterMaterial,
             }}
             spinSpeed={spinSpeed}
           />
@@ -632,8 +666,8 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
               ref={controlsRef}
               enableDamping
               enablePan={false}
-              minDistance={sceneControls.minDistance}
-              maxDistance={sceneControls.maxDistance}
+              minDistance={zoomBounds.min}
+              maxDistance={zoomBounds.max}
               maxAzimuthAngle={orbitLimits.maxAzimuthAngle}
               maxPolarAngle={orbitLimits.maxPolarAngle}
               minAzimuthAngle={orbitLimits.minAzimuthAngle}

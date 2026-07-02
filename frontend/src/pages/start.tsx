@@ -1,7 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Header from '../components/Header'
-import OrderSummary from '../components/OrderSummary'
+import CarSelectPage from './CarSelectPage'
+import OrderSummary from './OrderSummary'
 import { carConfigs, defaultCarConfig } from '../cars'
 import { resolveColorOptions } from '../cars/colors'
 
@@ -132,6 +133,16 @@ function getCustomizableSteps(carConfig) {
           },
         ]
       : []),
+    ...(hasColorConfig(carConfig.seatOuter)
+      ? [
+          {
+            id: 'seats',
+            type: 'seats',
+            label: 'Seat Colors',
+            scene: mergeSceneConfig(carConfig.scene, carConfig.seatOuter?.scene),
+          },
+        ]
+      : []),
     ...(carConfig.addOns ?? []).map((addOn) => ({
       id: addOn.id,
       type: 'addOn',
@@ -209,79 +220,6 @@ function ColorField({
   )
 }
 
-function CarSelectPage({
-  selectedCarId,
-  onSelectCar,
-}: {
-  selectedCarId: string
-  onSelectCar: (carId: string) => void
-}) {
-  return (
-    <main className="min-h-svh bg-[#f5f4f2] text-[#1f2328]">
-      <Header metricLabel="Models" metricValue={String(carConfigs.length)} subtitle="Select model" title="Car Builder" />
-
-      <section className="mx-auto grid min-h-[calc(100svh-81px)] max-w-[1280px] grid-rows-[auto_1fr] gap-8 px-8 py-10 max-[760px]:px-4 max-[760px]:py-6">
-        <div className="max-w-[760px]">
-          <p className="text-[13px] font-semibold text-[#60656c]">Choose your vehicle</p>
-          <h2 className="mt-3 text-[clamp(38px,6vw,76px)] leading-[0.96] font-normal tracking-[-0.04em] text-[#1f2328]">
-            Start your configuration
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] content-start gap-5">
-          {carConfigs.map((config) => {
-            const isSelected = selectedCarId === config.id
-            const paintColors = getColorOptions(config.paint).slice(0, 5)
-            const rimColors = getColorOptions(config.rims).slice(0, 4)
-
-            return (
-              <button
-                className={`group cursor-pointer rounded-[3px] border bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#1c69d4] hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1c69d4] ${isSelected ? 'border-[#1c69d4] ring-1 ring-[#1c69d4]' : 'border-[#dfe3e8]'}`}
-                key={config.id}
-                onClick={() => onSelectCar(config.id)}
-                type="button"
-              >
-                <div className="mb-6 flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[12px] font-semibold text-[#60656c]">Model</p>
-                    <h3 className="mt-2 text-[26px] leading-tight font-semibold tracking-[-0.03em] text-[#1f2328]">{config.name}</h3>
-                  </div>
-                  <span className="rounded-[3px] bg-[#1c69d4] px-4 py-2 text-[13px] font-semibold text-white transition group-hover:bg-[#1654aa]">
-                    Build
-                  </span>
-                </div>
-
-                <div className="mb-5 grid h-40 place-items-center rounded-[18px] border border-[#dfe3e8] bg-[#ebe8e3]">
-                  <span className="text-[64px] leading-none font-semibold tracking-[-0.08em] text-[#c4c8ce]">{config.name.slice(0, 2).toUpperCase()}</span>
-                </div>
-
-                <div className="flex items-center justify-between gap-4 border-t border-[#dfe3e8] pt-4">
-                  <div>
-                    <p className="text-[12px] font-semibold text-[#60656c]">From</p>
-                    <p className="mt-1 text-[20px] leading-none font-semibold text-[#1f2328]">{formatPrice(config.basePrice ?? 0)} kr</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex gap-1.5">
-                      {paintColors.map((color) => (
-                        <span className="h-5 w-5 rounded-full border border-black/15" key={color.value} style={{ background: color.value }} />
-                      ))}
-                    </div>
-                    <div className="flex gap-1.5">
-                      {rimColors.map((color) => (
-                        <span className="h-3 w-3 rounded-full border border-black/15" key={color.value} style={{ background: color.value }} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      </section>
-    </main>
-  )
-}
-
 function StartPage() {
   const navigate = useNavigate()
   const { carId } = useParams()
@@ -301,9 +239,11 @@ function StartPage() {
   const bodyColorOptions = useMemo(() => getColorOptions(carConfig.paint), [carConfig])
   const rimColorOptions = useMemo(() => getColorOptions(carConfig.rims), [carConfig])
   const caliperColorOptions = useMemo(() => hasColorConfig(carConfig.calipers) ? getColorOptions(carConfig.calipers) : [], [carConfig])
+  const seatOuterColorOptions = useMemo(() => hasColorConfig(carConfig.seatOuter) ? getColorOptions(carConfig.seatOuter) : [], [carConfig])
   const [bodyColor, setBodyColor] = useState(() => getDefaultColorValue(defaultCarConfig.paint))
   const [rimColor, setRimColor] = useState(() => getDefaultColorValue(defaultCarConfig.rims))
   const [caliperColor, setCaliperColor] = useState(() => hasColorConfig(defaultCarConfig.calipers) ? getDefaultColorValue(defaultCarConfig.calipers) : '#d71920')
+  const [seatOuterColor, setSeatOuterColor] = useState(() => hasColorConfig(defaultCarConfig.seatOuter) ? getDefaultColorValue(defaultCarConfig.seatOuter) : '#1f1b1a')
   const [customBodyColor, setCustomBodyColor] = useState(defaultCarConfig.paint.custom?.defaultValue ?? '#7c3aed')
   const [customRimColor, setCustomRimColor] = useState(defaultCarConfig.rims.custom?.defaultValue ?? '#8b5e3c')
   const [customCaliperColor, setCustomCaliperColor] = useState(defaultCarConfig.calipers?.custom?.defaultValue ?? '#d71920')
@@ -313,9 +253,11 @@ function StartPage() {
   const selectedBodyOption = bodyColorOptions.find((option) => option.value === bodyColor) ?? bodyColorOptions[0]
   const selectedRimOption = rimColorOptions.find((option) => option.value === rimColor) ?? rimColorOptions[0]
   const selectedCaliperOption = caliperColorOptions.find((option) => option.value === caliperColor) ?? caliperColorOptions[0]
+  const selectedSeatOuterOption = seatOuterColorOptions.find((option) => option.value === seatOuterColor) ?? seatOuterColorOptions[0]
   const effectiveBodyColor = selectedBodyOption.custom ? customBodyColor : selectedBodyOption.value
   const effectiveRimColor = selectedRimOption.custom ? customRimColor : selectedRimOption.value
   const effectiveCaliperColor = selectedCaliperOption?.custom ? customCaliperColor : selectedCaliperOption?.value
+  const effectiveSeatOuterColor = selectedSeatOuterOption?.value
   const activeCustomConfig = activeCustomPicker === 'body'
     ? carConfig.paint.custom
     : activeCustomPicker === 'rim'
@@ -326,7 +268,8 @@ function StartPage() {
     : null
   const addOnTotal = (carConfig.addOns ?? []).reduce((total, addOn) => total + (addOnValues[addOn.id] ? addOn.price ?? 0 : 0), 0)
   const caliperPrice = selectedCaliperOption?.price ?? 0
-  const money = (carConfig.basePrice ?? 0) + selectedBodyOption.price + selectedRimOption.price + caliperPrice + addOnTotal
+  const seatOuterPrice = selectedSeatOuterOption?.price ?? 0
+  const money = (carConfig.basePrice ?? 0) + selectedBodyOption.price + selectedRimOption.price + caliperPrice + seatOuterPrice + addOnTotal
   const orderLines = useMemo(() => {
     const bodyValue = selectedBodyOption.custom
       ? `${selectedBodyOption.name} ${customBodyColor.toUpperCase()}`
@@ -337,6 +280,7 @@ function StartPage() {
     const caliperValue = selectedCaliperOption?.custom
       ? `${selectedCaliperOption.name} ${customCaliperColor.toUpperCase()}`
       : selectedCaliperOption?.name
+    const seatOuterValue = selectedSeatOuterOption?.name
     const selectedAddOns = (carConfig.addOns ?? [])
       .filter((addOn) => addOnValues[addOn.id])
       .map((addOn) => ({
@@ -375,9 +319,19 @@ function StartPage() {
             },
           ]
         : []),
+      ...(selectedSeatOuterOption
+        ? [
+            {
+              id: 'seatOuter',
+              label: carConfig.seatOuter.label ?? 'Seat Outer',
+              value: seatOuterValue,
+              price: selectedSeatOuterOption.price,
+            },
+          ]
+        : []),
       ...selectedAddOns,
     ]
-  }, [addOnValues, carConfig, customBodyColor, customCaliperColor, customRimColor, selectedBodyOption, selectedCaliperOption, selectedRimOption])
+  }, [addOnValues, carConfig, customBodyColor, customCaliperColor, customRimColor, selectedBodyOption, selectedCaliperOption, selectedRimOption, selectedSeatOuterOption])
   const [displayMoney, setDisplayMoney] = useState(money)
   const [priceDirection, setPriceDirection] = useState<'up' | 'down' | 'idle'>('idle')
   const canGoPrevious = activeStepIndex > 0
@@ -431,6 +385,7 @@ function StartPage() {
     setBodyColor(getDefaultColorValue(carConfig.paint))
     setRimColor(getDefaultColorValue(carConfig.rims))
     setCaliperColor(hasColorConfig(carConfig.calipers) ? getDefaultColorValue(carConfig.calipers) : '#d71920')
+    setSeatOuterColor(hasColorConfig(carConfig.seatOuter) ? getDefaultColorValue(carConfig.seatOuter) : '#1f1b1a')
     setCustomBodyColor(carConfig.paint.custom?.defaultValue ?? '#7c3aed')
     setCustomRimColor(carConfig.rims.custom?.defaultValue ?? '#8b5e3c')
     setCustomCaliperColor(carConfig.calipers?.custom?.defaultValue ?? '#d71920')
@@ -451,14 +406,12 @@ function StartPage() {
   useEffect(() => {
     const savedBuild = readSavedBuild(carConfig.id)
     const defaultAddOnValues = getDefaultAddOnValues(carConfig)
-    const savedStepIndex = Number.isInteger(savedBuild?.activeStepIndex) ? savedBuild.activeStepIndex : 0
-    const savedStepId = typeof savedBuild?.activeStepId === 'string' ? savedBuild.activeStepId : null
-    const savedStepIdIndex = savedStepId ? customizableSteps.findIndex((step) => step.id === savedStepId) : -1
 
     setSceneReady(false)
     setBodyColor(savedBuild?.bodyColor ?? getDefaultColorValue(carConfig.paint))
     setRimColor(savedBuild?.rimColor ?? getDefaultColorValue(carConfig.rims))
     setCaliperColor(savedBuild?.caliperColor ?? (hasColorConfig(carConfig.calipers) ? getDefaultColorValue(carConfig.calipers) : '#d71920'))
+    setSeatOuterColor(savedBuild?.seatOuterColor ?? (hasColorConfig(carConfig.seatOuter) ? getDefaultColorValue(carConfig.seatOuter) : '#1f1b1a'))
     setCustomBodyColor(savedBuild?.customBodyColor ?? carConfig.paint.custom?.defaultValue ?? '#7c3aed')
     setCustomRimColor(savedBuild?.customRimColor ?? carConfig.rims.custom?.defaultValue ?? '#8b5e3c')
     setCustomCaliperColor(savedBuild?.customCaliperColor ?? carConfig.calipers?.custom?.defaultValue ?? '#d71920')
@@ -466,7 +419,7 @@ function StartPage() {
       ...defaultAddOnValues,
       ...(savedBuild?.addOnValues ?? {}),
     })
-    setActiveStepIndex(savedStepIdIndex >= 0 ? savedStepIdIndex : Math.min(Math.max(savedStepIndex, 0), customizableSteps.length - 1))
+    setActiveStepIndex(0)
     setActiveCustomPicker(null)
     setRestoredCarId(carConfig.id)
   }, [carConfig, customizableSteps])
@@ -482,6 +435,7 @@ function StartPage() {
       bodyColor,
       rimColor,
       caliperColor,
+      seatOuterColor,
       customBodyColor,
       customRimColor,
       customCaliperColor,
@@ -494,6 +448,7 @@ function StartPage() {
     bodyColor,
     caliperColor,
     carConfig.id,
+    seatOuterColor,
     customBodyColor,
     customCaliperColor,
     customRimColor,
@@ -520,6 +475,11 @@ function StartPage() {
       return
     }
 
+    setActiveCustomPicker(null)
+  }
+
+  const selectSeatOuterColor = (option: ColorOption) => {
+    setSeatOuterColor(option.value)
     setActiveCustomPicker(null)
   }
 
@@ -595,7 +555,7 @@ function StartPage() {
   }, [activeCustomPicker])
 
   if (!carId) {
-    return <CarSelectPage onSelectCar={selectCarForBuilder} selectedCarId={selectedCarId} />
+    return <CarSelectPage carConfigs={carConfigs} onSelectCar={selectCarForBuilder} selectedCarId={selectedCarId} />
   }
 
   return (
@@ -659,6 +619,8 @@ function StartPage() {
                 rimMaterial={selectedRimOption.material}
                 sceneConfig={activeStep?.scene ?? carConfig.scene}
                 sceneTunerTarget={sceneTunerTarget}
+                seatOuterColor={effectiveSeatOuterColor}
+                seatOuterMaterial={selectedSeatOuterOption?.material}
                 usePanelSceneTuner
               />
             </Suspense>
@@ -741,6 +703,19 @@ function StartPage() {
               onChange={selectCaliperColor}
               getOptionColor={(option) => option.custom ? customCaliperColor : option.value}
             />
+          )}
+
+          {activeStep?.type === 'seats' && (
+            <>
+              {selectedSeatOuterOption && (
+                <ColorField
+                  label={carConfig.seatOuter.label ?? 'Seat Outer'}
+                  options={seatOuterColorOptions}
+                  value={seatOuterColor}
+                  onChange={selectSeatOuterColor}
+                />
+              )}
+            </>
           )}
 
           {activeStep?.type === 'addOn' && activeAddOn && (

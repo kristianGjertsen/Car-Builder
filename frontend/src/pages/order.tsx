@@ -1,7 +1,7 @@
 import { Suspense, lazy, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Header from '../components/Header'
-import OrderSummary from '../components/OrderSummary'
+import OrderSummary from './OrderSummary'
 import { carConfigs, defaultCarConfig } from '../cars'
 import { resolveColorOptions } from '../cars/colors'
 
@@ -78,9 +78,13 @@ function OrderPage() {
   const selectedCaliperOption = hasColorConfig(carConfig.calipers)
     ? getSelectedColorOption(carConfig.calipers, savedBuild?.caliperColor)
     : null
+  const selectedSeatOuterOption = hasColorConfig(carConfig.seatOuter)
+    ? getSelectedColorOption(carConfig.seatOuter, savedBuild?.seatOuterColor)
+    : null
   const effectiveBodyColor = selectedBodyOption.custom ? savedBuild?.customBodyColor ?? selectedBodyOption.value : selectedBodyOption.value
   const effectiveRimColor = selectedRimOption.custom ? savedBuild?.customRimColor ?? selectedRimOption.value : selectedRimOption.value
   const effectiveCaliperColor = selectedCaliperOption?.custom ? savedBuild?.customCaliperColor ?? selectedCaliperOption.value : selectedCaliperOption?.value
+  const effectiveSeatOuterColor = selectedSeatOuterOption?.value
   const addOnValues = savedBuild?.addOnValues ?? {}
   const selectedAddOns = (carConfig.addOns ?? []).filter((addOn) => Boolean(savedBuild?.addOnValues?.[addOn.id]))
   const orderScene = {
@@ -124,6 +128,16 @@ function OrderPage() {
           },
         ]
       : []),
+    ...(selectedSeatOuterOption
+      ? [
+          {
+            id: 'seatOuter',
+            label: carConfig.seatOuter.label ?? 'Seat Outer',
+            value: selectedSeatOuterOption.name,
+            price: selectedSeatOuterOption.price,
+          },
+        ]
+      : []),
     ...selectedAddOns.map((addOn: { id: any; name: any; price: any }) => ({
       id: `addOn:${addOn.id}`,
       label: 'Add-on',
@@ -160,6 +174,8 @@ function OrderPage() {
                 rimColor={effectiveRimColor}
                 rimMaterial={selectedRimOption.material}
                 sceneConfig={carConfig.orderScene ?? orderScene}
+                seatOuterColor={effectiveSeatOuterColor}
+                seatOuterMaterial={selectedSeatOuterOption?.material}
                 spinSpeed={0.09}
               />
             </Suspense>
