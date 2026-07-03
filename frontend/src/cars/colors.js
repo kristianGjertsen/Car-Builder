@@ -80,9 +80,9 @@ export const colorPresets = {
   gold: {
     value: '#d4a23a',
     material: {
-      metalness: 2,
-      roughness: 0.1,
-      clearcoat: 0.2,
+      metalness: 1,
+      roughness: 0,
+      clearcoat: 0,
       clearcoatRoughness: 0.12,
       envMapIntensity: 1,
     },

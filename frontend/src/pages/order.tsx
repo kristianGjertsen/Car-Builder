@@ -111,12 +111,16 @@ function OrderPage() {
       label: carConfig.paint.label ?? 'Body Color',
       value: selectedBodyOption.custom ? `${selectedBodyOption.name} ${(savedBuild?.customBodyColor ?? '').toUpperCase()}` : selectedBodyOption.name,
       price: selectedBodyOption.price,
+      color: effectiveBodyColor,
+      customColor: selectedBodyOption.custom,
     },
     {
       id: 'rims',
       label: carConfig.rims.label ?? 'Rim Color',
       value: selectedRimOption.custom ? `${selectedRimOption.name} ${(savedBuild?.customRimColor ?? '').toUpperCase()}` : selectedRimOption.name,
       price: selectedRimOption.price,
+      color: effectiveRimColor,
+      customColor: selectedRimOption.custom,
     },
     ...(selectedCaliperOption
       ? [
@@ -125,6 +129,8 @@ function OrderPage() {
             label: carConfig.calipers.label ?? 'Caliper Color',
             value: selectedCaliperOption.custom ? `${selectedCaliperOption.name} ${(savedBuild?.customCaliperColor ?? '').toUpperCase()}` : selectedCaliperOption.name,
             price: selectedCaliperOption.price,
+            color: effectiveCaliperColor,
+            customColor: selectedCaliperOption.custom,
           },
         ]
       : []),
@@ -135,6 +141,8 @@ function OrderPage() {
             label: carConfig.seatOuter.label ?? 'Seat Outer',
             value: selectedSeatOuterOption.name,
             price: selectedSeatOuterOption.price,
+            color: effectiveSeatOuterColor,
+            customColor: selectedSeatOuterOption.custom,
           },
         ]
       : []),
@@ -185,18 +193,6 @@ function OrderPage() {
           <h2 className="mt-3 max-w-[760px] text-[clamp(38px,6vw,72px)] leading-[0.96] font-normal tracking-[-0.04em]">
             Review your configuration
           </h2>
-
-          <div className="mt-10 grid gap-3 border-t border-[#dfe3e8] pt-6 text-[15px]">
-            {orderLines.map((line) => (
-              <div className="flex items-center justify-between gap-4 border-b border-[#edf0f2] py-4 last:border-b-0" key={line.id}>
-                <div>
-                  <p className="font-semibold">{line.value}</p>
-                  <p className="mt-1 text-[13px] text-[#60656c]">{line.label}</p>
-                </div>
-                <p className="shrink-0 font-semibold">{formatPrice(line.price)} kr</p>
-              </div>
-            ))}
-          </div>
 
           <div className="mt-8 flex flex-wrap gap-3">
             <button

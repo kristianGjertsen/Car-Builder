@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import ColorSwatch from '../components/ColorSwatch'
 import Header from '../components/Header'
 import CarSelectPage from './CarSelectPage'
 import OrderSummary from './OrderSummary'
@@ -18,10 +19,6 @@ type ColorOption = {
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('nb-NO').format(price)
-}
-
-function getCustomPreviewBackground(color: string) {
-  return `linear-gradient(135deg, #111 0 18%, transparent 18% 32%, #111 32% 50%, transparent 50% 68%, #111 68% 82%, transparent 82% 100%), ${color}`
 }
 
 function getColorOptions(colorConfig): ColorOption[] {
@@ -83,15 +80,36 @@ function hasColorConfig(colorConfig) {
   return Boolean(colorConfig?.colors?.length)
 }
 
+function stripScenePositions(scene = {}) {
+  const { positions, ...sceneWithoutPositions } = scene
+
+  return sceneWithoutPositions
+}
+
 function mergeSceneConfig(baseScene = {}, stepScene = {}) {
   return {
-    ...baseScene,
-    ...stepScene,
+    ...stripScenePositions(baseScene),
+    ...stripScenePositions(stepScene),
     intro: {
       ...(baseScene.intro ?? {}),
       ...(stepScene.intro ?? {}),
     },
   }
+}
+
+function getScenePositions(baseScene = {}, stepScene = {}) {
+  const sharedScene = mergeSceneConfig(baseScene, stepScene)
+  const positions = stepScene?.positions ?? []
+
+  if (!positions.length) {
+    return []
+  }
+
+  return positions.map((position, index) => ({
+    id: position.id ?? `position-${index + 1}`,
+    label: position.label ?? `Position ${index + 1}`,
+    scene: mergeSceneConfig(sharedScene, position.scene ?? position),
+  }))
 }
 
 function getCustomizableSteps(carConfig) {
@@ -100,12 +118,14 @@ function getCustomizableSteps(carConfig) {
       ...carConfig.customizable.steps.map((step) => ({
         ...step,
         scene: mergeSceneConfig(carConfig.scene, step.scene),
+        scenePositions: getScenePositions(carConfig.scene, step.scene),
       })),
       {
         id: 'order',
         type: 'order',
         label: 'Order',
-        scene: mergeSceneConfig(carConfig.scene, carConfig.customizable.orderScene),
+        scene: mergeSceneConfig(carConfig.scene, carConfig.customizable.orderScene ?? carConfig.orderScene),
+        scenePositions: getScenePositions(carConfig.scene, carConfig.customizable.orderScene ?? carConfig.orderScene),
       },
     ]
   }
@@ -116,12 +136,14 @@ function getCustomizableSteps(carConfig) {
       type: 'paint',
       label: carConfig.paint?.label ?? 'Body Color',
       scene: mergeSceneConfig(carConfig.scene, carConfig.paint?.scene),
+      scenePositions: getScenePositions(carConfig.scene, carConfig.paint?.scene),
     },
     {
       id: 'rims',
       type: 'rims',
       label: carConfig.rims?.label ?? 'Rim Color',
       scene: mergeSceneConfig(carConfig.scene, carConfig.rims?.scene),
+      scenePositions: getScenePositions(carConfig.scene, carConfig.rims?.scene),
     },
     ...(hasColorConfig(carConfig.calipers)
       ? [
@@ -130,6 +152,7 @@ function getCustomizableSteps(carConfig) {
             type: 'calipers',
             label: carConfig.calipers.label ?? 'Caliper Color',
             scene: mergeSceneConfig(carConfig.scene, carConfig.calipers.scene),
+            scenePositions: getScenePositions(carConfig.scene, carConfig.calipers.scene),
           },
         ]
       : []),
@@ -140,6 +163,7 @@ function getCustomizableSteps(carConfig) {
             type: 'seats',
             label: 'Seat Colors',
             scene: mergeSceneConfig(carConfig.scene, carConfig.seatOuter?.scene),
+            scenePositions: getScenePositions(carConfig.scene, carConfig.seatOuter?.scene),
           },
         ]
       : []),
@@ -149,12 +173,14 @@ function getCustomizableSteps(carConfig) {
       addOnId: addOn.id,
       label: addOn.name,
       scene: mergeSceneConfig(carConfig.scene, addOn.scene),
+      scenePositions: getScenePositions(carConfig.scene, addOn.scene),
     })),
     {
       id: 'order',
       type: 'order',
       label: 'Order',
       scene: mergeSceneConfig(carConfig.scene, carConfig.orderScene),
+      scenePositions: getScenePositions(carConfig.scene, carConfig.orderScene),
     },
   ]
 }
@@ -195,16 +221,10 @@ function ColorField({
               onClick={() => onChange(option)}
               type="button"
             >
-              <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full border border-black/15">
-                <span
-                  className="absolute inset-1 rounded-full"
-                  style={{
-                    background: option.custom
-                      ? getCustomPreviewBackground(getOptionColor ? getOptionColor(option) : '#7c3aed')
-                      : (getOptionColor ? getOptionColor(option) : option.value),
-                  }}
-                />
-              </span>
+              <ColorSwatch
+                color={getOptionColor ? getOptionColor(option) : option.value}
+                custom={option.custom}
+              />
               <span className="min-w-0">
                 <span className="block text-[13px] leading-tight font-semibold text-[#1f2328]">{option.name}</span>
                 <span className="mt-1 block text-[12px] leading-none text-[#60656c]">{formatPrice(option.price)} kr</span>
@@ -235,7 +255,10 @@ function StartPage() {
   )
   const customizableSteps = useMemo(() => getCustomizableSteps(carConfig), [carConfig])
   const [activeStepIndex, setActiveStepIndex] = useState(0)
+  const [activeScenePositionIndex, setActiveScenePositionIndex] = useState(0)
   const activeStep = customizableSteps[Math.min(activeStepIndex, customizableSteps.length - 1)] ?? customizableSteps[0]
+  const activeScenePositions = activeStep?.scenePositions ?? []
+  const activeSceneConfig = activeScenePositions[activeScenePositionIndex]?.scene ?? activeStep?.scene ?? carConfig.scene
   const bodyColorOptions = useMemo(() => getColorOptions(carConfig.paint), [carConfig])
   const rimColorOptions = useMemo(() => getColorOptions(carConfig.rims), [carConfig])
   const caliperColorOptions = useMemo(() => hasColorConfig(carConfig.calipers) ? getColorOptions(carConfig.calipers) : [], [carConfig])
@@ -355,16 +378,19 @@ function StartPage() {
 
   const goToPreviousStep = () => {
     setActiveCustomPicker(null)
+    setActiveScenePositionIndex(0)
     setActiveStepIndex((currentIndex) => Math.max(currentIndex - 1, 0))
   }
 
   const goToNextStep = () => {
     setActiveCustomPicker(null)
+    setActiveScenePositionIndex(0)
     setActiveStepIndex((currentIndex) => Math.min(currentIndex + 1, customizableSteps.length - 1))
   }
 
   const goToStep = (stepIndex: number) => {
     setActiveCustomPicker(null)
+    setActiveScenePositionIndex(0)
 
     if (customizableSteps[stepIndex]?.type === 'order') {
       navigate(`/cars/${encodeURIComponent(carConfig.id)}/order`)
@@ -382,6 +408,7 @@ function StartPage() {
   const resetBuild = () => {
     setActiveCustomPicker(null)
     setActiveStepIndex(0)
+    setActiveScenePositionIndex(0)
     setBodyColor(getDefaultColorValue(carConfig.paint))
     setRimColor(getDefaultColorValue(carConfig.rims))
     setCaliperColor(hasColorConfig(carConfig.calipers) ? getDefaultColorValue(carConfig.calipers) : '#d71920')
@@ -420,9 +447,18 @@ function StartPage() {
       ...(savedBuild?.addOnValues ?? {}),
     })
     setActiveStepIndex(0)
+    setActiveScenePositionIndex(0)
     setActiveCustomPicker(null)
     setRestoredCarId(carConfig.id)
   }, [carConfig, customizableSteps])
+
+  useEffect(() => {
+    if (activeScenePositionIndex < activeScenePositions.length) {
+      return
+    }
+
+    setActiveScenePositionIndex(0)
+  }, [activeScenePositionIndex, activeScenePositions.length])
 
   useEffect(() => {
     if (restoredCarId !== carConfig.id) {
@@ -617,13 +653,32 @@ function StartPage() {
                 paintMaterial={selectedBodyOption.material}
                 rimColor={effectiveRimColor}
                 rimMaterial={selectedRimOption.material}
-                sceneConfig={activeStep?.scene ?? carConfig.scene}
+                sceneConfig={activeSceneConfig}
                 sceneTunerTarget={sceneTunerTarget}
                 seatOuterColor={effectiveSeatOuterColor}
                 seatOuterMaterial={selectedSeatOuterOption?.material}
                 usePanelSceneTuner
               />
             </Suspense>
+
+            {activeScenePositions.length > 1 && (
+              <div className="absolute top-5 left-1/2 z-30 flex max-w-[calc(100%-40px)] -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-full bg-white/92 px-3 py-2 shadow-sm backdrop-blur">
+                {activeScenePositions.map((position, index) => {
+                  const isActive = index === activeScenePositionIndex
+
+                  return (
+                    <button
+                      className={`min-h-9 cursor-pointer rounded-full px-4 text-[12px] font-semibold transition ${isActive ? 'bg-[#1f2328] text-white' : 'bg-[#eef0f2] text-[#1f2328] hover:bg-[#dfe4ea]'}`}
+                      key={position.id}
+                      onClick={() => setActiveScenePositionIndex(index)}
+                      type="button"
+                    >
+                      {position.label}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
             <div className="absolute bottom-5 left-5 z-30 flex items-center gap-3 rounded-full bg-white/90 px-3 py-2 text-[12px] font-semibold text-[#60656c] shadow-sm backdrop-blur">
               <span className="grid h-8 w-8 place-items-center rounded-full bg-[#1f2328] text-[10px] text-white">360</span>
@@ -769,27 +824,35 @@ function StartPage() {
               </div>
 
               <div className="mt-4 flex items-center gap-3 max-[420px]:items-start">
-                <input
-                  aria-label={activeCustomPicker === 'body' ? 'Choose custom body color' : activeCustomPicker === 'rim' ? 'Choose custom rim color' : 'Choose custom caliper color'}
-                  className="h-16 w-16 shrink-0 cursor-pointer rounded-[3px] border border-[#c9d0d8] bg-transparent p-1"
-                  onChange={(event) => {
-                    const color = event.target.value
+                <label className="relative block h-16 w-16 shrink-0 cursor-pointer">
+                  <input
+                    aria-label={activeCustomPicker === 'body' ? 'Choose custom body color' : activeCustomPicker === 'rim' ? 'Choose custom rim color' : 'Choose custom caliper color'}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                    onChange={(event) => {
+                      const color = event.target.value
 
-                    if (activeCustomPicker === 'body') {
-                      setCustomBodyColor(color)
-                      return
-                    }
+                      if (activeCustomPicker === 'body') {
+                        setCustomBodyColor(color)
+                        return
+                      }
 
-                    if (activeCustomPicker === 'rim') {
-                      setCustomRimColor(color)
-                      return
-                    }
+                      if (activeCustomPicker === 'rim') {
+                        setCustomRimColor(color)
+                        return
+                      }
 
-                    setCustomCaliperColor(color)
-                  }}
-                  type="color"
-                  value={activeCustomPicker === 'body' ? customBodyColor : activeCustomPicker === 'rim' ? customRimColor : customCaliperColor}
-                />
+                      setCustomCaliperColor(color)
+                    }}
+                    type="color"
+                    value={activeCustomPicker === 'body' ? customBodyColor : activeCustomPicker === 'rim' ? customRimColor : customCaliperColor}
+                  />
+                  <ColorSwatch
+                    className="h-16 w-16 rounded-[3px]"
+                    color={activeCustomPicker === 'body' ? customBodyColor : activeCustomPicker === 'rim' ? customRimColor : customCaliperColor}
+                    custom
+                    fillClassName="inset-[5px] rounded-[2px]"
+                  />
+                </label>
                 <div>
                   <p className="text-[13px] font-semibold">
                     {activeCustomPicker === 'body' ? 'Custom body color' : activeCustomPicker === 'rim' ? 'Custom rim color' : 'Custom caliper color'}

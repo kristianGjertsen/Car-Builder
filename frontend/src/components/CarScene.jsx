@@ -35,6 +35,14 @@ function easeOutCubic(progress) {
   return 1 - (1 - progress) ** 3
 }
 
+function easeInOutCubic(progress) {
+  if (progress < 0.5) {
+    return 4 * progress ** 3
+  }
+
+  return 1 - ((-2 * progress + 2) ** 3) / 2
+}
+
 function getIntroStartHeight(sceneControls) {
   return sceneControls.intro?.startHeight ?? fallbackSceneControls.intro.startHeight
 }
@@ -268,8 +276,76 @@ function getInterpolatedSceneControls(startControls, endControls, progress) {
   }
 }
 
+function getControlSpaceInterpolatedSceneControls(startControls, endControls, progress) {
+  return {
+    ...endControls,
+    cameraAngle: interpolateDegrees(startControls.cameraAngle, endControls.cameraAngle, progress),
+    cameraHeight: interpolateValue(startControls.cameraHeight, endControls.cameraHeight, progress),
+    zoom: interpolateValue(startControls.zoom, endControls.zoom, progress),
+    carAngle: interpolateDegrees(startControls.carAngle, endControls.carAngle, progress),
+    fov: interpolateValue(startControls.fov, endControls.fov, progress),
+    light: interpolateValue(startControls.light, endControls.light, progress),
+    shadow: interpolateValue(startControls.shadow, endControls.shadow, progress),
+    target: interpolateVector(startControls.target, endControls.target, progress),
+  }
+}
+
+function getSafeMidTransitionControls(startControls, endControls) {
+  const [startTargetX, startTargetY, startTargetZ] = startControls.target
+  const [endTargetX, endTargetY, endTargetZ] = endControls.target
+  const horizontalTargetDistance = Math.hypot(endTargetX - startTargetX, endTargetZ - startTargetZ)
+  const safeZoom = Math.max(
+    startControls.zoom,
+    endControls.zoom,
+    horizontalTargetDistance + 2.5,
+  )
+  const safeHeight = Math.max(
+    startControls.cameraHeight,
+    endControls.cameraHeight,
+    getIntroStartHeight(endControls),
+    startTargetY + 1.4,
+    endTargetY + 1.4,
+  )
+
+  return {
+    ...endControls,
+    cameraAngle: interpolateDegrees(startControls.cameraAngle, endControls.cameraAngle, 0.5),
+    cameraHeight: safeHeight,
+    zoom: safeZoom,
+    target: interpolateVector(startControls.target, endControls.target, 0.5),
+    carAngle: interpolateDegrees(startControls.carAngle, endControls.carAngle, 0.5),
+    fov: interpolateValue(startControls.fov, endControls.fov, 0.5),
+    light: interpolateValue(startControls.light, endControls.light, 0.5),
+    shadow: interpolateValue(startControls.shadow, endControls.shadow, 0.5),
+  }
+}
+
 function getTransitionSceneControls(startControls, endControls, progress) {
-  return getInterpolatedSceneControls(startControls, endControls, easeOutCubic(progress))
+  const transitionType = endControls.intro?.transition ?? fallbackSceneControls.intro.transition
+
+  if (transitionType === 'linear') {
+    return getInterpolatedSceneControls(startControls, endControls, easeOutCubic(progress))
+  }
+
+  if (transitionType === 'zoom-out-in') {
+    const safeMidControls = getSafeMidTransitionControls(startControls, endControls)
+
+    if (progress < 0.5) {
+      return getControlSpaceInterpolatedSceneControls(
+        startControls,
+        safeMidControls,
+        easeInOutCubic(progress / 0.5),
+      )
+    }
+
+    return getControlSpaceInterpolatedSceneControls(
+      safeMidControls,
+      endControls,
+      easeInOutCubic((progress - 0.5) / 0.5),
+    )
+  }
+
+  return getControlSpaceInterpolatedSceneControls(startControls, endControls, easeOutCubic(progress))
 }
 
 function formatSceneConfigForClipboard(sceneControls) {

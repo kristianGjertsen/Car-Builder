@@ -24,6 +24,18 @@ const bmwX7M60iConfig = {
     },
   },
 
+  orderScene: {
+    cameraAngle: 16,
+    cameraHeight: 1.25,
+    zoom: 8.2,
+    fov: 45,
+    carAngle: 0,
+    target: [0, 0.35, 0],
+    intro: {
+      enabled: false,
+    },
+  },
+
   customizable: {
     steps: [
       {
