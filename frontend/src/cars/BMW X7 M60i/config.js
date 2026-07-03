@@ -21,6 +21,7 @@ const bmwX7M60iConfig = {
       enabled: true,
       startHeight: 8,
       duration: 1200,
+      animateBetweenPositions: true,
     },
   },
 

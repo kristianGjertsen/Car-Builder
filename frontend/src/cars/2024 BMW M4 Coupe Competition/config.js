@@ -21,6 +21,7 @@ const BMW_M4_Coupe_Competition = {
       enabled: true,
       startHeight: 8,
       duration: 1200,
+      animateBetweenPositions: true,
     },
   },
 

@@ -258,6 +258,7 @@ function StartPage() {
   const [activeScenePositionIndex, setActiveScenePositionIndex] = useState(0)
   const activeStep = customizableSteps[Math.min(activeStepIndex, customizableSteps.length - 1)] ?? customizableSteps[0]
   const activeScenePositions = activeStep?.scenePositions ?? []
+  const activeScenePosition = activeScenePositions[activeScenePositionIndex]
   const activeSceneConfig = activeScenePositions[activeScenePositionIndex]?.scene ?? activeStep?.scene ?? carConfig.scene
   const bodyColorOptions = useMemo(() => getColorOptions(carConfig.paint), [carConfig])
   const rimColorOptions = useMemo(() => getColorOptions(carConfig.rims), [carConfig])
@@ -654,6 +655,8 @@ function StartPage() {
                 rimColor={effectiveRimColor}
                 rimMaterial={selectedRimOption.material}
                 sceneConfig={activeSceneConfig}
+                sceneGroupKey={activeStep?.id ?? 'default'}
+                scenePositionKey={activeScenePosition?.id ?? 'default'}
                 sceneTunerTarget={sceneTunerTarget}
                 seatOuterColor={effectiveSeatOuterColor}
                 seatOuterMaterial={selectedSeatOuterOption?.material}

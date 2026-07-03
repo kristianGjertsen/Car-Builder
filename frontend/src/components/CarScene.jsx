@@ -28,6 +28,7 @@ const fallbackSceneControls = {
     duration: 1200,
     transition: 'orbit',
     useLast: false,
+    animateBetweenPositions: true,
   },
 }
 
@@ -369,6 +370,7 @@ function formatSceneConfigForClipboard(sceneControls) {
     duration: ${sceneControls.intro.duration},
     transition: "${sceneControls.intro.transition ?? fallbackSceneControls.intro.transition}",
     useLast: ${Boolean(sceneControls.intro.useLast)},
+    animateBetweenPositions: ${sceneControls.intro.animateBetweenPositions ?? fallbackSceneControls.intro.animateBetweenPositions},
   },
 }`
 }
@@ -457,11 +459,13 @@ function SceneModel({ autoSpin = false, baseRotation, centerModel = false, model
   )
 }
 
-function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial, carColor, carConfig, centerModel = false, paintMaterial, presentationMode = false, rimColor, rimMaterial, rimType = 'standard', sceneConfig, sceneTunerTarget, seatOuterColor, seatOuterMaterial, spinSpeed, usePanelSceneTuner = false, onReady }) {
+function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial, carColor, carConfig, centerModel = false, paintMaterial, presentationMode = false, rimColor, rimMaterial, rimType = 'standard', sceneConfig, sceneGroupKey = 'default', scenePositionKey = 'default', sceneTunerTarget, seatOuterColor, seatOuterMaterial, spinSpeed, usePanelSceneTuner = false, onReady }) {
   const controlsRef = useRef(null)
   const introFrameRef = useRef(null)
   const isSceneTransitioningRef = useRef(false)
   const latestSceneControlsRef = useRef(null)
+  const previousSceneGroupKeyRef = useRef(null)
+  const previousScenePositionKeyRef = useRef(null)
   const [showTuner, setShowTuner] = useState(false)
   const [modelReady, setModelReady] = useState(false)
   const defaultSceneControls = useMemo(() => getSceneControls(sceneConfig ?? carConfig.scene), [carConfig.scene, sceneConfig])
@@ -645,7 +649,16 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
       return undefined
     }
 
-    if (defaultSceneControls.intro?.enabled === false) {
+    const previousSceneGroupKey = previousSceneGroupKeyRef.current
+    const previousScenePositionKey = previousScenePositionKeyRef.current
+    const lastSceneControls = latestSceneControlsRef.current
+    const isPositionChange = previousSceneGroupKey === sceneGroupKey && previousScenePositionKey !== scenePositionKey
+    const shouldAnimateBetweenPositions = isPositionChange && defaultSceneControls.intro?.animateBetweenPositions !== false && lastSceneControls
+
+    previousSceneGroupKeyRef.current = sceneGroupKey
+    previousScenePositionKeyRef.current = scenePositionKey
+
+    if (defaultSceneControls.intro?.enabled === false && !shouldAnimateBetweenPositions) {
       introFrameRef.current = requestAnimationFrame(() => {
         latestSceneControlsRef.current = defaultSceneControls
         setSceneControls(defaultSceneControls)
@@ -658,13 +671,14 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
       }
     }
 
-    const lastSceneControls = latestSceneControlsRef.current
-    const startControls = defaultSceneControls.intro?.useLast && lastSceneControls
+    const startControls = shouldAnimateBetweenPositions
+      ? lastSceneControls
+      : defaultSceneControls.intro?.useLast && lastSceneControls
       ? lastSceneControls
       : {
           ...defaultSceneControls,
           cameraHeight: getIntroStartHeight(defaultSceneControls),
-    }
+        }
     const endControls = defaultSceneControls
     const duration = defaultSceneControls.intro?.duration ?? fallbackSceneControls.intro.duration
     const startTime = performance.now()
@@ -694,7 +708,7 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
 
       isSceneTransitioningRef.current = false
     }
-  }, [defaultSceneControls, modelReady])
+  }, [defaultSceneControls, modelReady, sceneGroupKey, scenePositionKey])
 
   return (
     <>
