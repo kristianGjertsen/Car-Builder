@@ -32,6 +32,10 @@ const fallbackSceneControls = {
   },
 }
 
+const hoodClearanceHeightThreshold = 2
+const hoodClearanceZoomThreshold = 8
+const hoodClearanceMaxLift = 1.2
+
 function easeOutCubic(progress) {
   return 1 - (1 - progress) ** 3
 }
@@ -235,6 +239,22 @@ function interpolateVector(startTarget, endTarget, progress) {
   return endTarget.map((value, index) => interpolateValue(startTarget[index] ?? value, value, progress))
 }
 
+function getHoodClearanceLift(startControls, endControls, progress) {
+  const lowestCameraHeight = Math.min(startControls.cameraHeight, endControls.cameraHeight)
+  const closestZoom = Math.min(startControls.zoom, endControls.zoom)
+  const lowHeightFactor = clampValue((hoodClearanceHeightThreshold - lowestCameraHeight) / hoodClearanceHeightThreshold, 0, 1)
+  const closeZoomFactor = clampValue((hoodClearanceZoomThreshold - closestZoom) / hoodClearanceZoomThreshold, 0, 1)
+  const liftStrength = (lowHeightFactor + closeZoomFactor) / 2
+
+  if (liftStrength === 0) {
+    return 0
+  }
+
+  const liftCurve = Math.sin(progress * Math.PI) * (1 - progress * 0.18)
+
+  return hoodClearanceMaxLift * liftStrength * liftCurve
+}
+
 function getCameraPositionFromControls(sceneControls) {
   const radians = degreesToRadians(sceneControls.cameraAngle)
   const [targetX, , targetZ] = sceneControls.target
@@ -264,6 +284,7 @@ function getInterpolatedSceneControls(startControls, endControls, progress) {
     getCameraPositionFromControls(endControls),
     progress,
   )
+  cameraPosition[1] += getHoodClearanceLift(startControls, endControls, progress)
   const cameraControls = getCameraControlsFromPosition(cameraPosition, target)
 
   return {
@@ -281,7 +302,7 @@ function getControlSpaceInterpolatedSceneControls(startControls, endControls, pr
   return {
     ...endControls,
     cameraAngle: interpolateDegrees(startControls.cameraAngle, endControls.cameraAngle, progress),
-    cameraHeight: interpolateValue(startControls.cameraHeight, endControls.cameraHeight, progress),
+    cameraHeight: interpolateValue(startControls.cameraHeight, endControls.cameraHeight, progress) + getHoodClearanceLift(startControls, endControls, progress),
     zoom: interpolateValue(startControls.zoom, endControls.zoom, progress),
     carAngle: interpolateDegrees(startControls.carAngle, endControls.carAngle, progress),
     fov: interpolateValue(startControls.fov, endControls.fov, progress),
