@@ -167,6 +167,13 @@ const BMW_M4_Coupe_Competition = {
                 target: [0, 0.6, 0.3],
                 minDistance: 0.12,
                 maxDistance: 0.12,
+                intro: {
+                  enabled: true,
+                  startHeight: 100,
+                  duration: 700,
+                  transition: "orbit",
+                  useLast: true,
+                },
               },
             },
             {

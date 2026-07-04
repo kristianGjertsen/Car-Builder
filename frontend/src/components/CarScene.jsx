@@ -468,6 +468,7 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
   const previousScenePositionKeyRef = useRef(null)
   const [showTuner, setShowTuner] = useState(false)
   const [modelReady, setModelReady] = useState(false)
+  const [isIntroActive, setIsIntroActive] = useState(false)
   const defaultSceneControls = useMemo(() => getSceneControls(sceneConfig ?? carConfig.scene), [carConfig.scene, sceneConfig])
   const [sceneControls, setSceneControls] = useState(() => getInitialSceneControls(defaultSceneControls))
   const zoomBounds = useMemo(() => getZoomBounds(sceneControls), [sceneControls])
@@ -624,6 +625,22 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
   }, [sceneControls])
 
   useEffect(() => {
+    const controls = controlsRef.current
+
+    if (!controls || presentationMode) {
+      return
+    }
+
+    const [cameraX, cameraY, cameraZ] = cameraPosition
+    const [targetX, targetY, targetZ] = sceneControls.target
+
+    controls.object.position.set(cameraX, cameraY, cameraZ)
+    controls.target.set(targetX, targetY, targetZ)
+    controls.enabled = !isIntroActive
+    controls.update()
+  }, [cameraPosition, isIntroActive, presentationMode, sceneControls.target])
+
+  useEffect(() => {
     setSceneControls((currentControls) => {
       const nextZoom = roundSceneValue(clampValue(currentControls.zoom, zoomBounds.min, zoomBounds.max))
 
@@ -644,6 +661,7 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
     }
 
     isSceneTransitioningRef.current = false
+    setIsIntroActive(false)
 
     if (!modelReady) {
       return undefined
@@ -684,6 +702,7 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
     const startTime = performance.now()
 
     isSceneTransitioningRef.current = true
+    setIsIntroActive(true)
 
     const tick = (now) => {
       const progress = Math.min((now - startTime) / duration, 1)
@@ -696,6 +715,7 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
 
       latestSceneControlsRef.current = endControls
       isSceneTransitioningRef.current = false
+      setIsIntroActive(false)
       setSceneControls(endControls)
     }
 
@@ -707,6 +727,7 @@ function CarScene({ addOnValues, autoSpin = false, caliperColor, caliperMaterial
       }
 
       isSceneTransitioningRef.current = false
+      setIsIntroActive(false)
     }
   }, [defaultSceneControls, modelReady, sceneGroupKey, scenePositionKey])
 
