@@ -1,4 +1,5 @@
-import ColorSwatch from '../components/ColorSwatch'
+import ColorSwatch from '../ColorSwatch'
+import { formatPrice } from '../../builder/buildUtils'
 
 type OrderLine = {
   id: string
@@ -7,10 +8,6 @@ type OrderLine = {
   price: number
   color?: string
   customColor?: boolean
-}
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat('nb-NO').format(price)
 }
 
 function OrderSummary({

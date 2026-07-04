@@ -1,68 +1,19 @@
 import { Suspense, lazy, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import OrderSummary from '../components/builder/OrderSummary'
+import SceneLoadingPanel from '../components/builder/SceneLoadingPanel'
 import Header from '../components/Header'
-import OrderSummary from './OrderSummary'
 import { carConfigs, defaultCarConfig } from '../cars'
-import { resolveColorOptions } from '../cars/colors'
+import {
+  formatPrice,
+  getOrderLines,
+  getSelectedAddOns,
+  getSelectedColorOption,
+  hasColorConfig,
+  readSavedBuild,
+} from '../builder/buildUtils'
 
 const CarScene = lazy(() => import('../components/CarScene'))
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat('nb-NO').format(price)
-}
-
-function getSavedBuildKey(carId: string) {
-  return `car-builder:build:${carId}`
-}
-
-function readSavedBuild(carId: string) {
-  try {
-    const savedBuild = window.localStorage.getItem(getSavedBuildKey(carId))
-
-    return savedBuild ? JSON.parse(savedBuild) : null
-  } catch {
-    return null
-  }
-}
-
-function getColorOptions(colorConfig) {
-  const colors = resolveColorOptions(colorConfig)
-
-  if (!colorConfig.custom?.enabled) {
-    return colors
-  }
-
-  return [
-    ...colors,
-    {
-      name: colorConfig.custom.name ?? 'Custom',
-      value: colorConfig.custom.value,
-      price: colorConfig.custom.price ?? 0,
-      material: {
-        ...(colorConfig.material ?? {}),
-        ...(colorConfig.custom.material ?? {}),
-      },
-      custom: true,
-    },
-  ]
-}
-
-function getDefaultColorValue(colorConfig) {
-  const colors = resolveColorOptions(colorConfig)
-  const defaultOption = colors.find((option) => option.value === colorConfig.defaultValue || option.name === colorConfig.defaultValue)
-
-  return defaultOption?.value ?? colors[0]?.value
-}
-
-function hasColorConfig(colorConfig) {
-  return Boolean(colorConfig?.colors?.length)
-}
-
-function getSelectedColorOption(colorConfig, savedValue) {
-  const options = getColorOptions(colorConfig)
-
-  return options.find((option) => option.value === savedValue) ?? options.find((option) => option.value === getDefaultColorValue(colorConfig)) ?? options[0]
-}
 
 function OrderPage() {
   const navigate = useNavigate()
@@ -86,7 +37,7 @@ function OrderPage() {
   const effectiveCaliperColor = selectedCaliperOption?.custom ? savedBuild?.customCaliperColor ?? selectedCaliperOption.value : selectedCaliperOption?.value
   const effectiveSeatOuterColor = selectedSeatOuterOption?.value
   const addOnValues = savedBuild?.addOnValues ?? {}
-  const selectedAddOns = (carConfig.addOns ?? []).filter((addOn) => Boolean(savedBuild?.addOnValues?.[addOn.id]))
+  const selectedAddOns = getSelectedAddOns(carConfig, savedBuild?.addOnValues ?? {})
   const orderScene = {
     ...carConfig.scene,
     cameraAngle: 18,
@@ -99,60 +50,22 @@ function OrderPage() {
       enabled: false,
     },
   }
-  const orderLines = [
-    {
-      id: 'base',
-      label: 'Model',
-      value: carConfig.name,
-      price: carConfig.basePrice ?? 0,
-    },
-    {
-      id: 'paint',
-      label: carConfig.paint.label ?? 'Body Color',
-      value: selectedBodyOption.custom ? `${selectedBodyOption.name} ${(savedBuild?.customBodyColor ?? '').toUpperCase()}` : selectedBodyOption.name,
-      price: selectedBodyOption.price,
-      color: effectiveBodyColor,
-      customColor: selectedBodyOption.custom,
-    },
-    {
-      id: 'rims',
-      label: carConfig.rims.label ?? 'Rim Color',
-      value: selectedRimOption.custom ? `${selectedRimOption.name} ${(savedBuild?.customRimColor ?? '').toUpperCase()}` : selectedRimOption.name,
-      price: selectedRimOption.price,
-      color: effectiveRimColor,
-      customColor: selectedRimOption.custom,
-    },
-    ...(selectedCaliperOption
-      ? [
-          {
-            id: 'calipers',
-            label: carConfig.calipers.label ?? 'Caliper Color',
-            value: selectedCaliperOption.custom ? `${selectedCaliperOption.name} ${(savedBuild?.customCaliperColor ?? '').toUpperCase()}` : selectedCaliperOption.name,
-            price: selectedCaliperOption.price,
-            color: effectiveCaliperColor,
-            customColor: selectedCaliperOption.custom,
-          },
-        ]
-      : []),
-    ...(selectedSeatOuterOption
-      ? [
-          {
-            id: 'seatOuter',
-            label: carConfig.seatOuter.label ?? 'Seat Outer',
-            value: selectedSeatOuterOption.name,
-            price: selectedSeatOuterOption.price,
-            color: effectiveSeatOuterColor,
-            customColor: selectedSeatOuterOption.custom,
-          },
-        ]
-      : []),
-    ...selectedAddOns.map((addOn: { id: any; name: any; price: any }) => ({
-      id: `addOn:${addOn.id}`,
-      label: 'Add-on',
-      value: addOn.name,
-      price: addOn.price ?? 0,
-    })),
-  ]
+  const orderLines = getOrderLines({
+    carConfig,
+    customBodyColor: savedBuild?.customBodyColor ?? '',
+    customCaliperColor: savedBuild?.customCaliperColor ?? '',
+    customRimColor: savedBuild?.customRimColor ?? '',
+    effectiveBodyColor,
+    effectiveCaliperColor,
+    effectiveRimColor,
+    effectiveSeatOuterColor,
+    includeColorMetadata: true,
+    selectedAddOns,
+    selectedBodyOption,
+    selectedCaliperOption,
+    selectedRimOption,
+    selectedSeatOuterOption,
+  })
   const total = orderLines.reduce((sum, line) => sum + line.price, 0)
 
   return (
@@ -216,17 +129,6 @@ function OrderPage() {
         </aside>
       </section>
     </main>
-  )
-}
-
-function SceneLoadingPanel() {
-  return (
-    <div className="grid h-full w-full place-items-center text-center">
-      <div>
-        <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#60656c]">Loading scene</p>
-        <p className="mt-2 text-[14px] text-[#1f2328]">Preparing the 3D preview.</p>
-      </div>
-    </div>
   )
 }
 
