@@ -110,7 +110,7 @@ const BMW_M4_Coupe_Competition = {
                 fov: 20,
                 carAngle: 0,
                 maxRotationX: 90,
-                maxRotationY: 180,
+                maxRotationY: 60,
                 background: "#ffffff",
                 target: [0, -0.35, 1.8],
                 minDistance: 5,
