@@ -100,7 +100,7 @@ function CarScene({
         zoomBounds={zoomBounds}
       />
 
-      {!presentationMode && (sceneTunerTarget ? createPortal(sceneTuner, sceneTunerTarget) : !usePanelSceneTuner ? sceneTuner : null)}
+       { /* !presentationMode && (sceneTunerTarget ? createPortal(sceneTuner, sceneTunerTarget) : !usePanelSceneTuner ? sceneTuner : null) */}
     </>
   )
 }
