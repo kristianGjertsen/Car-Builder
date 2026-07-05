@@ -164,7 +164,7 @@ const bmwX7M60iConfig = {
                 intro: {
                   enabled: true,
                   startHeight: 100,
-                  duration: 700,
+                  duration: 900,
                   transition: "orbit",
                   useLast: true,
                   animateBetweenPositions: true,
