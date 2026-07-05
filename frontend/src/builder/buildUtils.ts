@@ -22,25 +22,7 @@ export function formatPrice(price: number) {
 }
 
 export function getColorOptions(colorConfig): ColorOption[] {
-  const colors = resolveColorOptions(colorConfig)
-
-  if (!colorConfig.custom?.enabled) {
-    return colors
-  }
-
-  return [
-    ...colors,
-    {
-      name: colorConfig.custom.name ?? 'Custom',
-      value: colorConfig.custom.value,
-      price: colorConfig.custom.price ?? 0,
-      material: {
-        ...(colorConfig.material ?? {}),
-        ...(colorConfig.custom.material ?? {}),
-      },
-      custom: true,
-    },
-  ]
+  return resolveColorOptions(colorConfig)
 }
 
 export function getDefaultAddOnValues(carConfig: { addOns: any }) {
@@ -92,44 +74,37 @@ export function getSelectedAddOns(carConfig, addOnValues = {}) {
 
 export function getOrderLines({
   carConfig,
-  customBodyColor,
-  customCaliperColor,
-  customRimColor,
   effectiveBodyColor,
   effectiveCaliperColor,
+  effectiveGlassTintColor,
   effectiveRimColor,
   effectiveSeatOuterColor,
   includeColorMetadata = false,
   selectedAddOns = [],
   selectedBodyOption,
   selectedCaliperOption,
+  selectedGlassTintOption,
   selectedRimOption,
   selectedSeatOuterOption,
 }: {
   carConfig: any
-  customBodyColor: string
-  customCaliperColor: string
-  customRimColor: string
   effectiveBodyColor?: string
   effectiveCaliperColor?: string
+  effectiveGlassTintColor?: string
   effectiveRimColor?: string
   effectiveSeatOuterColor?: string
   includeColorMetadata?: boolean
   selectedAddOns?: any[]
   selectedBodyOption: ColorOption
   selectedCaliperOption?: ColorOption | null
+  selectedGlassTintOption?: ColorOption | null
   selectedRimOption: ColorOption
   selectedSeatOuterOption?: ColorOption | null
 }): OrderLine[] {
-  const bodyValue = selectedBodyOption.custom
-    ? `${selectedBodyOption.name} ${customBodyColor.toUpperCase()}`
-    : selectedBodyOption.name
-  const rimValue = selectedRimOption.custom
-    ? `${selectedRimOption.name} ${customRimColor.toUpperCase()}`
-    : selectedRimOption.name
-  const caliperValue = selectedCaliperOption?.custom
-    ? `${selectedCaliperOption.name} ${customCaliperColor.toUpperCase()}`
-    : selectedCaliperOption?.name
+  const bodyValue = selectedBodyOption.name
+  const rimValue = selectedRimOption.name
+  const caliperValue = selectedCaliperOption?.name
+  const glassTintValue = selectedGlassTintOption?.name
   const seatOuterValue = selectedSeatOuterOption?.name
 
   const withColorMetadata = (line: OrderLine, color?: string, customColor?: boolean) => {
@@ -159,7 +134,7 @@ export function getOrderLines({
         price: selectedBodyOption.price,
       },
       effectiveBodyColor,
-      selectedBodyOption.custom,
+      false,
     ),
     withColorMetadata(
       {
@@ -169,7 +144,7 @@ export function getOrderLines({
         price: selectedRimOption.price,
       },
       effectiveRimColor,
-      selectedRimOption.custom,
+      false,
     ),
     ...(selectedCaliperOption
       ? [
@@ -181,7 +156,21 @@ export function getOrderLines({
               price: selectedCaliperOption.price,
             },
             effectiveCaliperColor,
-            selectedCaliperOption.custom,
+            false,
+          ),
+        ]
+      : []),
+    ...(selectedGlassTintOption
+      ? [
+          withColorMetadata(
+            {
+              id: 'glassTint',
+              label: carConfig.glassTint.label ?? 'Window Tint',
+              value: glassTintValue,
+              price: selectedGlassTintOption.price,
+            },
+            effectiveGlassTintColor,
+            false,
           ),
         ]
       : []),
@@ -195,7 +184,7 @@ export function getOrderLines({
               price: selectedSeatOuterOption.price,
             },
             effectiveSeatOuterColor,
-            selectedSeatOuterOption.custom,
+            false,
           ),
         ]
       : []),

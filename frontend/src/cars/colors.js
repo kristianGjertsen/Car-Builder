@@ -97,6 +97,16 @@ export const colorPresets = {
       envMapIntensity: 1.08,
     },
   },
+  'gray': {
+    value: '#706e6e',
+    material: {
+      metalness: 0.4,
+      roughness: 0.9,
+      clearcoat: 0.26,
+      clearcoatRoughness: 0.08,
+      envMapIntensity: 1.25,
+    },
+  },
   'm red': {
     value: '#d71920',
     material: {

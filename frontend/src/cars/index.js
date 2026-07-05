@@ -9,6 +9,12 @@ const modelModules = import.meta.glob('./*/*.glb', {
   query: '?url',
 })
 
+const previewModules = import.meta.glob('./*/*.{png,jpg,jpeg,webp,avif}', {
+  eager: true,
+  import: 'default',
+  query: '?url',
+})
+
 function getFolderPath(filePath) {
   return filePath.slice(0, filePath.lastIndexOf('/'))
 }
@@ -32,10 +38,26 @@ function getModelPathForConfig(configPath) {
   return typeof modelModule === 'string' ? modelModule : modelModule.default
 }
 
+function getPreviewImageForConfig(configPath) {
+  const configFolder = getFolderPath(configPath)
+  const matchingPreviews = Object.entries(previewModules)
+    .filter(([assetPath]) => getFolderPath(assetPath) === configFolder)
+    .sort(([firstPath], [secondPath]) => firstPath.localeCompare(secondPath))
+
+  if (matchingPreviews.length === 0) {
+    return null
+  }
+
+  const previewModule = matchingPreviews[0][1]
+
+  return typeof previewModule === 'string' ? previewModule : previewModule.default
+}
+
 export const carConfigs = Object.entries(configModules).map(([configPath, config]) => ({
   ...config,
   modelId: getFolderPath(configPath),
   modelPath: getModelPathForConfig(configPath),
+  previewImage: getPreviewImageForConfig(configPath),
 }))
 
 const modelPathCounts = carConfigs.reduce((counts, config) => {

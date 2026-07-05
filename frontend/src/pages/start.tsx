@@ -23,7 +23,6 @@ import {
 function StartPage() {
   const navigate = useNavigate()
   const { carId } = useParams()
-  const customPickerRef = useRef<HTMLDivElement | null>(null)
   const animationFrameRef = useRef<number | null>(null)
   const resetDirectionTimeoutRef = useRef<number | null>(null)
   const [sceneTunerTarget, setSceneTunerTarget] = useState<HTMLDivElement | null>(null)
@@ -43,48 +42,43 @@ function StartPage() {
   const bodyColorOptions = useMemo(() => getColorOptions(carConfig.paint), [carConfig])
   const rimColorOptions = useMemo(() => getColorOptions(carConfig.rims), [carConfig])
   const caliperColorOptions = useMemo(() => hasColorConfig(carConfig.calipers) ? getColorOptions(carConfig.calipers) : [], [carConfig])
+  const glassTintColorOptions = useMemo(() => hasColorConfig(carConfig.glassTint) ? getColorOptions(carConfig.glassTint) : [], [carConfig])
   const seatOuterColorOptions = useMemo(() => hasColorConfig(carConfig.seatOuter) ? getColorOptions(carConfig.seatOuter) : [], [carConfig])
   const [bodyColor, setBodyColor] = useState(() => getDefaultColorValue(defaultCarConfig.paint))
   const [rimColor, setRimColor] = useState(() => getDefaultColorValue(defaultCarConfig.rims))
   const [caliperColor, setCaliperColor] = useState(() => hasColorConfig(defaultCarConfig.calipers) ? getDefaultColorValue(defaultCarConfig.calipers) : '#d71920')
+  const [glassTintColor, setGlassTintColor] = useState(() => hasColorConfig(defaultCarConfig.glassTint) ? getDefaultColorValue(defaultCarConfig.glassTint) : '#9fb4c4')
   const [seatOuterColor, setSeatOuterColor] = useState(() => hasColorConfig(defaultCarConfig.seatOuter) ? getDefaultColorValue(defaultCarConfig.seatOuter) : '#1f1b1a')
-  const [customBodyColor, setCustomBodyColor] = useState(defaultCarConfig.paint.custom?.defaultValue ?? '#7c3aed')
-  const [customRimColor, setCustomRimColor] = useState(defaultCarConfig.rims.custom?.defaultValue ?? '#8b5e3c')
-  const [customCaliperColor, setCustomCaliperColor] = useState(defaultCarConfig.calipers?.custom?.defaultValue ?? '#d71920')
   const [addOnValues, setAddOnValues] = useState(() => getDefaultAddOnValues(defaultCarConfig))
-  const [activeCustomPicker, setActiveCustomPicker] = useState<'body' | 'rim' | 'caliper' | null>(null)
   const [sceneReady, setSceneReady] = useState(false)
   const selectedBodyOption = bodyColorOptions.find((option) => option.value === bodyColor) ?? bodyColorOptions[0]
   const selectedRimOption = rimColorOptions.find((option) => option.value === rimColor) ?? rimColorOptions[0]
   const selectedCaliperOption = caliperColorOptions.find((option) => option.value === caliperColor) ?? caliperColorOptions[0]
+  const selectedGlassTintOption = glassTintColorOptions.find((option) => option.value === glassTintColor) ?? glassTintColorOptions[0]
   const selectedSeatOuterOption = seatOuterColorOptions.find((option) => option.value === seatOuterColor) ?? seatOuterColorOptions[0]
-  const effectiveBodyColor = selectedBodyOption.custom ? customBodyColor : selectedBodyOption.value
-  const effectiveRimColor = selectedRimOption.custom ? customRimColor : selectedRimOption.value
-  const effectiveCaliperColor = selectedCaliperOption?.custom ? customCaliperColor : selectedCaliperOption?.value
+  const effectiveBodyColor = selectedBodyOption.value
+  const effectiveRimColor = selectedRimOption.value
+  const effectiveCaliperColor = selectedCaliperOption?.value
+  const effectiveGlassTintColor = selectedGlassTintOption?.value
   const effectiveSeatOuterColor = selectedSeatOuterOption?.value
-  const activeCustomConfig = activeCustomPicker === 'body'
-    ? carConfig.paint.custom
-    : activeCustomPicker === 'rim'
-      ? carConfig.rims.custom
-      : carConfig.calipers?.custom
   const activeAddOn = activeStep?.type === 'addOn'
     ? (carConfig.addOns ?? []).find((addOn) => addOn.id === activeStep.addOnId)
     : null
   const addOnTotal = (carConfig.addOns ?? []).reduce((total, addOn) => total + (addOnValues[addOn.id] ? addOn.price ?? 0 : 0), 0)
   const caliperPrice = selectedCaliperOption?.price ?? 0
+  const glassTintPrice = selectedGlassTintOption?.price ?? 0
   const seatOuterPrice = selectedSeatOuterOption?.price ?? 0
-  const money = (carConfig.basePrice ?? 0) + selectedBodyOption.price + selectedRimOption.price + caliperPrice + seatOuterPrice + addOnTotal
+  const money = (carConfig.basePrice ?? 0) + selectedBodyOption.price + selectedRimOption.price + caliperPrice + glassTintPrice + seatOuterPrice + addOnTotal
   const orderLines = useMemo(() => getOrderLines({
     carConfig,
-    customBodyColor,
-    customCaliperColor,
-    customRimColor,
+    effectiveGlassTintColor,
     selectedAddOns: getSelectedAddOns(carConfig, addOnValues),
     selectedBodyOption,
     selectedCaliperOption,
+    selectedGlassTintOption,
     selectedRimOption,
     selectedSeatOuterOption,
-  }), [addOnValues, carConfig, customBodyColor, customCaliperColor, customRimColor, selectedBodyOption, selectedCaliperOption, selectedRimOption, selectedSeatOuterOption])
+  }), [addOnValues, carConfig, effectiveGlassTintColor, selectedBodyOption, selectedCaliperOption, selectedGlassTintOption, selectedRimOption, selectedSeatOuterOption])
   const [displayMoney, setDisplayMoney] = useState(money)
   const [priceDirection, setPriceDirection] = useState<'up' | 'down' | 'idle'>('idle')
   const canGoPrevious = activeStepIndex > 0
@@ -107,19 +101,16 @@ function StartPage() {
   }, [])
 
   const goToPreviousStep = () => {
-    setActiveCustomPicker(null)
     setActiveScenePositionIndex(0)
     setActiveStepIndex((currentIndex) => Math.max(currentIndex - 1, 0))
   }
 
   const goToNextStep = () => {
-    setActiveCustomPicker(null)
     setActiveScenePositionIndex(0)
     setActiveStepIndex((currentIndex) => Math.min(currentIndex + 1, customizableSteps.length - 1))
   }
 
   const goToStep = (stepIndex: number) => {
-    setActiveCustomPicker(null)
     setActiveScenePositionIndex(0)
 
     if (customizableSteps[stepIndex]?.type === 'order') {
@@ -131,33 +122,22 @@ function StartPage() {
   }
 
   const goToOrder = () => {
-    setActiveCustomPicker(null)
     navigate(`/cars/${encodeURIComponent(carConfig.id)}/order`)
   }
 
   const resetBuild = () => {
-    setActiveCustomPicker(null)
     setActiveStepIndex(0)
     setActiveScenePositionIndex(0)
     setBodyColor(getDefaultColorValue(carConfig.paint))
     setRimColor(getDefaultColorValue(carConfig.rims))
     setCaliperColor(hasColorConfig(carConfig.calipers) ? getDefaultColorValue(carConfig.calipers) : '#d71920')
+    setGlassTintColor(hasColorConfig(carConfig.glassTint) ? getDefaultColorValue(carConfig.glassTint) : '#9fb4c4')
     setSeatOuterColor(hasColorConfig(carConfig.seatOuter) ? getDefaultColorValue(carConfig.seatOuter) : '#1f1b1a')
-    setCustomBodyColor(carConfig.paint.custom?.defaultValue ?? '#7c3aed')
-    setCustomRimColor(carConfig.rims.custom?.defaultValue ?? '#8b5e3c')
-    setCustomCaliperColor(carConfig.calipers?.custom?.defaultValue ?? '#d71920')
     setAddOnValues(getDefaultAddOnValues(carConfig))
   }
 
   const selectBodyColor = (option: ColorOption) => {
     setBodyColor(option.value)
-
-    if (option.custom) {
-      setActiveCustomPicker('body')
-      return
-    }
-
-    setActiveCustomPicker(null)
   }
 
   useEffect(() => {
@@ -168,17 +148,14 @@ function StartPage() {
     setBodyColor(savedBuild?.bodyColor ?? getDefaultColorValue(carConfig.paint))
     setRimColor(savedBuild?.rimColor ?? getDefaultColorValue(carConfig.rims))
     setCaliperColor(savedBuild?.caliperColor ?? (hasColorConfig(carConfig.calipers) ? getDefaultColorValue(carConfig.calipers) : '#d71920'))
+    setGlassTintColor(savedBuild?.glassTintColor ?? (hasColorConfig(carConfig.glassTint) ? getDefaultColorValue(carConfig.glassTint) : '#9fb4c4'))
     setSeatOuterColor(savedBuild?.seatOuterColor ?? (hasColorConfig(carConfig.seatOuter) ? getDefaultColorValue(carConfig.seatOuter) : '#1f1b1a'))
-    setCustomBodyColor(savedBuild?.customBodyColor ?? carConfig.paint.custom?.defaultValue ?? '#7c3aed')
-    setCustomRimColor(savedBuild?.customRimColor ?? carConfig.rims.custom?.defaultValue ?? '#8b5e3c')
-    setCustomCaliperColor(savedBuild?.customCaliperColor ?? carConfig.calipers?.custom?.defaultValue ?? '#d71920')
     setAddOnValues({
       ...defaultAddOnValues,
       ...(savedBuild?.addOnValues ?? {}),
     })
     setActiveStepIndex(0)
     setActiveScenePositionIndex(0)
-    setActiveCustomPicker(null)
     setRestoredCarId(carConfig.id)
   }, [carConfig, customizableSteps])
 
@@ -201,10 +178,8 @@ function StartPage() {
       bodyColor,
       rimColor,
       caliperColor,
+      glassTintColor,
       seatOuterColor,
-      customBodyColor,
-      customRimColor,
-      customCaliperColor,
       addOnValues,
     })
   }, [
@@ -214,39 +189,26 @@ function StartPage() {
     bodyColor,
     caliperColor,
     carConfig.id,
+    glassTintColor,
     seatOuterColor,
-    customBodyColor,
-    customCaliperColor,
-    customRimColor,
     restoredCarId,
     rimColor,
   ])
 
   const selectRimColor = (option: ColorOption) => {
     setRimColor(option.value)
-
-    if (option.custom) {
-      setActiveCustomPicker('rim')
-      return
-    }
-
-    setActiveCustomPicker(null)
   }
 
   const selectCaliperColor = (option: ColorOption) => {
     setCaliperColor(option.value)
-
-    if (option.custom) {
-      setActiveCustomPicker('caliper')
-      return
-    }
-
-    setActiveCustomPicker(null)
   }
 
   const selectSeatOuterColor = (option: ColorOption) => {
     setSeatOuterColor(option.value)
-    setActiveCustomPicker(null)
+  }
+
+  const selectGlassTintColor = (option: ColorOption) => {
+    setGlassTintColor(option.value)
   }
 
   useEffect(() => {
@@ -300,26 +262,6 @@ function StartPage() {
     }
   }, [money])
 
-  useEffect(() => {
-    if (!activeCustomPicker) {
-      return
-    }
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (customPickerRef.current?.contains(event.target as Node)) {
-        return
-      }
-
-      setActiveCustomPicker(null)
-    }
-
-    document.addEventListener('mousedown', handlePointerDown)
-
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown)
-    }
-  }, [activeCustomPicker])
-
   if (!carId) {
     return <CarSelectPage carConfigs={carConfigs} onSelectCar={selectCarForBuilder} selectedCarId={selectedCarId} />
   }
@@ -357,6 +299,8 @@ function StartPage() {
             caliperColor: effectiveCaliperColor,
             carColor: effectiveBodyColor,
             carConfig,
+            glassTintColor: effectiveGlassTintColor,
+            glassTintMaterial: selectedGlassTintOption?.material,
             onReady: handleSceneReady,
             paintMaterial: selectedBodyOption.material,
             rimColor: effectiveRimColor,
@@ -379,8 +323,6 @@ function StartPage() {
 
         <BuildConfigPanel
           activeAddOn={activeAddOn}
-          activeCustomConfig={activeCustomConfig}
-          activeCustomPicker={activeCustomPicker}
           activeStep={activeStep}
           addOnValues={addOnValues}
           bodyColor={bodyColor}
@@ -388,12 +330,9 @@ function StartPage() {
           caliperColor={caliperColor}
           caliperColorOptions={caliperColorOptions}
           carConfig={carConfig}
-          customBodyColor={customBodyColor}
-          customCaliperColor={customCaliperColor}
-          customPickerRef={customPickerRef}
-          customRimColor={customRimColor}
+          glassTintColor={glassTintColor}
+          glassTintColorOptions={glassTintColorOptions}
           money={money}
-          onCustomPickerClose={() => setActiveCustomPicker(null)}
           orderLines={orderLines}
           rimColor={rimColor}
           rimColorOptions={rimColorOptions}
@@ -402,13 +341,11 @@ function StartPage() {
           seatOuterColorOptions={seatOuterColorOptions}
           selectBodyColor={selectBodyColor}
           selectCaliperColor={selectCaliperColor}
+          selectGlassTintColor={selectGlassTintColor}
           selectRimColor={selectRimColor}
           selectSeatOuterColor={selectSeatOuterColor}
           selectedCaliperOption={selectedCaliperOption}
           selectedSeatOuterOption={selectedSeatOuterOption}
-          setCustomBodyColor={setCustomBodyColor}
-          setCustomCaliperColor={setCustomCaliperColor}
-          setCustomRimColor={setCustomRimColor}
           setSceneTunerTarget={setSceneTunerTarget}
           toggleAddOn={toggleAddOn}
         />

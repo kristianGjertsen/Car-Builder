@@ -28,12 +28,16 @@ function OrderPage() {
   const selectedCaliperOption = hasColorConfig(carConfig.calipers)
     ? getSelectedColorOption(carConfig.calipers, savedBuild?.caliperColor)
     : null
+  const selectedGlassTintOption = hasColorConfig(carConfig.glassTint)
+    ? getSelectedColorOption(carConfig.glassTint, savedBuild?.glassTintColor)
+    : null
   const selectedSeatOuterOption = hasColorConfig(carConfig.seatOuter)
     ? getSelectedColorOption(carConfig.seatOuter, savedBuild?.seatOuterColor)
     : null
-  const effectiveBodyColor = selectedBodyOption.custom ? savedBuild?.customBodyColor ?? selectedBodyOption.value : selectedBodyOption.value
-  const effectiveRimColor = selectedRimOption.custom ? savedBuild?.customRimColor ?? selectedRimOption.value : selectedRimOption.value
-  const effectiveCaliperColor = selectedCaliperOption?.custom ? savedBuild?.customCaliperColor ?? selectedCaliperOption.value : selectedCaliperOption?.value
+  const effectiveBodyColor = selectedBodyOption.value
+  const effectiveRimColor = selectedRimOption.value
+  const effectiveCaliperColor = selectedCaliperOption?.value
+  const effectiveGlassTintColor = selectedGlassTintOption?.value
   const effectiveSeatOuterColor = selectedSeatOuterOption?.value
   const addOnValues = savedBuild?.addOnValues ?? {}
   const selectedAddOns = getSelectedAddOns(carConfig, savedBuild?.addOnValues ?? {})
@@ -52,17 +56,16 @@ function OrderPage() {
   const orderDisplay = useMemo(() => getOrderDisplayConfig(carConfig, fallbackOrderScene), [carConfig, fallbackOrderScene])
   const orderLines = getOrderLines({
     carConfig,
-    customBodyColor: savedBuild?.customBodyColor ?? '',
-    customCaliperColor: savedBuild?.customCaliperColor ?? '',
-    customRimColor: savedBuild?.customRimColor ?? '',
     effectiveBodyColor,
     effectiveCaliperColor,
+    effectiveGlassTintColor,
     effectiveRimColor,
     effectiveSeatOuterColor,
     includeColorMetadata: true,
     selectedAddOns,
     selectedBodyOption,
     selectedCaliperOption,
+    selectedGlassTintOption,
     selectedRimOption,
     selectedSeatOuterOption,
   })
@@ -87,6 +90,8 @@ function OrderPage() {
               caliperMaterial: selectedCaliperOption?.material,
               carColor: effectiveBodyColor,
               carConfig,
+              glassTintColor: effectiveGlassTintColor,
+              glassTintMaterial: selectedGlassTintOption?.material,
               paintMaterial: selectedBodyOption.material,
               rimColor: effectiveRimColor,
               rimMaterial: selectedRimOption.material,

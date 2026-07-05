@@ -30,7 +30,6 @@ function BuildStepper({
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-[14px] font-semibold">{step.label}</span>
-                  <span className="block text-[12px] text-[#60656c]">{isActive ? 'Active' : isComplete ? 'Configured' : 'Pending'}</span>
                 </span>
               </button>
             )

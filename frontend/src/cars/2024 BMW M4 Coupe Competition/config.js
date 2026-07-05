@@ -189,6 +189,7 @@ const BMW_M4_Coupe_Competition = {
           },
         },
       },
+
       {
         id: "seats",
         type: "seats",
@@ -256,6 +257,33 @@ const BMW_M4_Coupe_Competition = {
             useLast: false,
           },
         }
+      },
+      {
+        id: "glassTint",
+        type: "glassTint",
+        label: "Window Tint",
+        scene: {
+          cameraAngle: 90,
+          cameraHeight: 1.0,
+          zoom: 8.8,
+          fov: 28,
+          carAngle: 0,
+          maxRotationX: 90,
+          maxRotationY: 140,
+          light: 0.55,
+          shadow: 0.55,
+          background: "#ffffff",
+          target: [0, 0.85, 0],
+          minDistance: 4.2,
+          maxDistance: 12,
+          intro: {
+            enabled: true,
+            startHeight: 8,
+            duration: 800,
+            transition: "orbit",
+            useLast: true,
+          },
+        },
       },
     ],
   },
@@ -355,6 +383,53 @@ const BMW_M4_Coupe_Competition = {
       { name: "Anthracite", value: "#3a322d", price: 5900 },
       { name: "Tartufo", value: "#604131", price: 5900 },
       { name: "white", value: "#ffffff", price: 7900 },
+    ],
+    custom: {
+      enabled: false,
+    },
+  },
+
+  glassTint: {
+    label: "Window Tint",
+    defaultValue: "Factory",
+    meshNames: [],
+    materialNames: [],
+    keywords: ["doorglass", "sideglass", "windshield", "backlight", "trunk_M4_2024_glass_0"],
+    excludeKeywords: ["headlight", "taillight", "mirror", "glass_red", "bumper"],
+    material: {
+      metalness: 0,
+      roughness: 0.08,
+      clearcoat: 0.05,
+      clearcoatRoughness: 0.02,
+      envMapIntensity: 1.1,
+      transparent: true,
+      opacity: 0.72,
+    },
+    colors: [
+      {
+        name: "Factory",
+        value: "#000001",
+        price: 0,
+        material: {
+          opacity: 0.2,
+        },
+      },
+      {
+        name: "Privacy",
+        value: "#000002",
+        price: 11000,
+        material: {
+          opacity: 0.5,
+        },
+      },
+      {
+        name: "Executive",
+        value: "#000000",
+        price: 14000,
+        material: {
+          opacity: 0.7,
+        },
+      },
     ],
     custom: {
       enabled: false,

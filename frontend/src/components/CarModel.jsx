@@ -16,6 +16,8 @@ function CarModel({
   carConfig,
   caliperColor,
   caliperMaterial,
+  glassTintColor,
+  glassTintMaterial,
   paintMaterial,
   seatOuterColor,
   seatOuterMaterial,
@@ -47,6 +49,7 @@ function CarModel({
 
   const paintMaterialConfig = useMemo(() => paintMaterial ?? carConfig.paint?.material ?? {}, [carConfig.paint, paintMaterial])
   const caliperMaterialConfig = useMemo(() => caliperMaterial ?? carConfig.calipers?.material ?? {}, [caliperMaterial, carConfig.calipers])
+  const glassTintMaterialConfig = useMemo(() => glassTintMaterial ?? carConfig.glassTint?.material ?? {}, [carConfig.glassTint, glassTintMaterial])
   const seatOuterMaterialConfig = useMemo(() => seatOuterMaterial ?? carConfig.seatOuter?.material ?? {}, [carConfig.seatOuter, seatOuterMaterial])
 
   const rimMaterial = useMemo(
@@ -68,8 +71,9 @@ function CarModel({
     const missing = {
       body: true,
       rims: true,
-      calipers: !carConfig.calipers,
-      seatOuter: !carConfig.seatOuter,
+      calipers: Boolean(carConfig.calipers),
+      glassTint: Boolean(carConfig.glassTint),
+      seatOuter: Boolean(carConfig.seatOuter),
     }
     const missingAddOns = Object.fromEntries((carConfig.addOns ?? []).map((addOn) => [addOn.id, true]))
 
@@ -92,6 +96,9 @@ function CarModel({
       const isCaliper =
         object.userData[carBuilderPartKey] === 'calipers' ||
         matchesConfigPart(object, carConfig.calipers)
+      const isGlassTint =
+        object.userData[carBuilderPartKey] === 'glassTint' ||
+        matchesConfigPart(object, carConfig.glassTint)
       const isSeatOuter =
         object.userData[carBuilderPartKey] === 'seatOuter' ||
         matchesConfigPart(object, carConfig.seatOuter)
@@ -112,6 +119,12 @@ function CarModel({
         object.userData[carBuilderPartKey] = 'calipers'
         object.material = createColoredMaterial(getOriginalMaterial(object), caliperColor, caliperMaterialConfig)
         missing.calipers = false
+      }
+
+      if (isGlassTint) {
+        object.userData[carBuilderPartKey] = 'glassTint'
+        object.material = createColoredMaterial(getOriginalMaterial(object), glassTintColor, glassTintMaterialConfig)
+        missing.glassTint = false
       }
 
       if (isSeatOuter) {
@@ -145,7 +158,7 @@ function CarModel({
         console.warn(`CarModel: ${addOn.name} add-on mesh was not found. Check mesh names in Blender/GLB export.`)
       }
     })
-  }, [addOnValues, caliperColor, caliperMaterialConfig, carColor, carConfig, paintMaterialConfig, rimMaterial, scene, seatOuterColor, seatOuterMaterialConfig])
+  }, [addOnValues, caliperColor, caliperMaterialConfig, carColor, carConfig, glassTintColor, glassTintMaterialConfig, paintMaterialConfig, rimMaterial, scene, seatOuterColor, seatOuterMaterialConfig])
 
   useEffect(() => {
     onLoaded?.()

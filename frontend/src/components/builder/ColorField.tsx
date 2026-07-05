@@ -3,17 +3,21 @@ import { ColorOption, formatPrice } from '../../builder/buildUtils'
 
 function ColorField({
   label,
-  options,
+  options = [],
   value,
   onChange,
   getOptionColor,
 }: {
   label: string
-  options: ColorOption[]
+  options?: ColorOption[]
   value: string
   onChange: (option: ColorOption) => void
   getOptionColor?: (option: ColorOption) => string
 }) {
+  if (!options.length) {
+    return null
+  }
+
   const selected = options.find((option) => option.value === value)
 
   return (

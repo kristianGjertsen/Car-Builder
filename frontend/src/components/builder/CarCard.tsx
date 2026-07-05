@@ -28,8 +28,24 @@ function CarCard({
         </span>
       </div>
 
-      <div className="mb-5 grid h-40 place-items-center rounded-[18px] border border-[#dfe3e8] bg-[#ebe8e3]">
-        <span className="text-[64px] leading-none font-semibold tracking-[-0.08em] text-[#c4c8ce]">{config.name.slice(0, 2).toUpperCase()}</span>
+      <div className="mb-5 overflow-hidden rounded-[18px] border border-[#dfe3e8] bg-[#ebe8e3]">
+        {config.previewImage ? (
+          <img
+            alt={config.name}
+            className="h-56 w-full object-contain bg-white p-3"
+            loading="lazy"
+            src={config.previewImage}
+          />
+        ) : (
+          <div className="grid h-56 place-items-center bg-[radial-gradient(circle_at_top,#f7f5f1_0%,#ebe8e3_58%,#dfd9d0_100%)]">
+            <div className="text-center">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#60656c]">Preview Missing</p>
+              <p className="mt-3 text-[44px] leading-none font-semibold tracking-[-0.06em] text-[#b3b8bf]">
+                {config.name.slice(0, 2).toUpperCase()}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between gap-4 border-t border-[#dfe3e8] pt-4">

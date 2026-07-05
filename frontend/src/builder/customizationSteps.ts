@@ -74,6 +74,17 @@ export function getCustomizableSteps(carConfig) {
           },
         ]
       : []),
+    ...(Boolean(carConfig.glassTint?.colors?.length)
+      ? [
+          {
+            id: 'glassTint',
+            type: 'glassTint',
+            label: carConfig.glassTint.label ?? 'Window Tint',
+            scene: mergeSceneConfig(carConfig.scene, carConfig.glassTint.scene),
+            scenePositions: getScenePositions(carConfig.scene, carConfig.glassTint.scene),
+          },
+        ]
+      : []),
     ...(Boolean(carConfig.seatOuter?.colors?.length)
       ? [
           {

@@ -35,6 +35,12 @@ function Header({
             onClick={onLogoClick}
             type={onLogoClick ? 'button' : undefined}
           >
+            <div className="absolute inset-[5px] overflow-hidden border-1 border-[#aeb6c0] rounded-full">
+              <div className="absolute top-0 left-0 h-1/2 w-1/2 bg-[#1c69d4]" />
+              <div className="absolute top-0 right-0 h-1/2 w-1/2 bg-white" />
+              <div className="absolute bottom-0 left-0 h-1/2 w-1/2 bg-[#ffffff]" />
+              <div className="absolute right-0 bottom-0 h-1/2 w-1/2 bg-[#000000]" />
+            </div>
           </LogoElement>
 
           <div className="min-w-0">

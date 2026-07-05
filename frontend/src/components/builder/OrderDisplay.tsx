@@ -69,12 +69,14 @@ function OrderDisplay({
           Drag to rotate
         </div>
 
+        {/*
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-30">
           <span className="absolute top-1/2 left-0 h-px w-full bg-[#1c69d4]/35" />
           <span className="absolute top-0 left-1/2 h-full w-px bg-[#1c69d4]/35" />
           <span className="absolute top-1/2 left-1/2 h-px w-[142%] origin-center -translate-x-1/2 -translate-y-1/2 rotate-45 bg-[#1c69d4]/25" />
           <span className="absolute top-1/2 left-1/2 h-px w-[142%] origin-center -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-[#1c69d4]/25" />
         </div>
+        */}
       </div>
     </div>
   )

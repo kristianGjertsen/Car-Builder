@@ -11,6 +11,8 @@ function CarScene({
   carColor,
   carConfig,
   centerModel = false,
+  glassTintColor,
+  glassTintMaterial,
   paintMaterial,
   presentationMode = false,
   rimColor,
@@ -78,6 +80,8 @@ function CarScene({
         carRotation={carRotation}
         centerModel={centerModel}
         controlsRef={controlsRef}
+        glassTintColor={glassTintColor}
+        glassTintMaterial={glassTintMaterial}
         handleModelLoaded={handleModelLoaded}
         orbitLimits={orbitLimits}
         paintMaterial={paintMaterial}

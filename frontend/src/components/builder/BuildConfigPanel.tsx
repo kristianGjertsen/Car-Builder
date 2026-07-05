@@ -1,12 +1,9 @@
 import ColorField from './ColorField'
-import CustomColorPicker from './CustomColorPicker'
 import OrderSummary from './OrderSummary'
-import { ColorOption, OrderLine, formatPrice } from '../../builder/buildUtils'
+import { ColorOption, OrderLine, formatPrice, getColorOptions } from '../../builder/buildUtils'
 
 function BuildConfigPanel({
   activeAddOn,
-  activeCustomConfig,
-  activeCustomPicker,
   activeStep,
   addOnValues,
   bodyColor,
@@ -14,12 +11,9 @@ function BuildConfigPanel({
   caliperColor,
   caliperColorOptions,
   carConfig,
-  customBodyColor,
-  customCaliperColor,
-  customPickerRef,
-  customRimColor,
+  glassTintColor,
+  glassTintColorOptions = [],
   money,
-  onCustomPickerClose,
   orderLines,
   rimColor,
   rimColorOptions,
@@ -28,19 +22,15 @@ function BuildConfigPanel({
   seatOuterColorOptions,
   selectBodyColor,
   selectCaliperColor,
+  selectGlassTintColor = () => {},
   selectRimColor,
   selectSeatOuterColor,
   selectedCaliperOption,
   selectedSeatOuterOption,
-  setCustomBodyColor,
-  setCustomCaliperColor,
-  setCustomRimColor,
   setSceneTunerTarget,
   toggleAddOn,
 }: {
   activeAddOn: any
-  activeCustomConfig: any
-  activeCustomPicker: 'body' | 'rim' | 'caliper' | null
   activeStep: any
   addOnValues: Record<string, boolean>
   bodyColor: string
@@ -48,12 +38,9 @@ function BuildConfigPanel({
   caliperColor: string
   caliperColorOptions: ColorOption[]
   carConfig: any
-  customBodyColor: string
-  customCaliperColor: string
-  customPickerRef: any
-  customRimColor: string
+  glassTintColor: string
+  glassTintColorOptions?: ColorOption[]
   money: number
-  onCustomPickerClose: () => void
   orderLines: OrderLine[]
   rimColor: string
   rimColorOptions: ColorOption[]
@@ -62,16 +49,21 @@ function BuildConfigPanel({
   seatOuterColorOptions: ColorOption[]
   selectBodyColor: (option: ColorOption) => void
   selectCaliperColor: (option: ColorOption) => void
+  selectGlassTintColor?: (option: ColorOption) => void
   selectRimColor: (option: ColorOption) => void
   selectSeatOuterColor: (option: ColorOption) => void
   selectedCaliperOption?: ColorOption
   selectedSeatOuterOption?: ColorOption
-  setCustomBodyColor: (color: string) => void
-  setCustomCaliperColor: (color: string) => void
-  setCustomRimColor: (color: string) => void
   setSceneTunerTarget: (node: HTMLDivElement | null) => void
   toggleAddOn: (addOnId: string) => void
 }) {
+  const resolvedGlassTintColorOptions = glassTintColorOptions.length > 0
+    ? glassTintColorOptions
+    : (carConfig.glassTint?.colors?.length ? getColorOptions(carConfig.glassTint) : [])
+  const handleGlassTintSelect = (option: ColorOption) => {
+    selectGlassTintColor(option)
+  }
+
   return (
     <aside className="min-w-0 max-[980px]:order-3">
       <div className="sticky top-[104px] max-h-[calc(100svh-128px)] overflow-y-auto rounded-[3px] border border-[#dfe3e8] bg-white shadow-sm max-[980px]:static max-[980px]:max-h-none">
@@ -89,7 +81,6 @@ function BuildConfigPanel({
               options={bodyColorOptions}
               value={bodyColor}
               onChange={selectBodyColor}
-              getOptionColor={(option) => option.custom ? customBodyColor : option.value}
             />
           )}
 
@@ -99,7 +90,6 @@ function BuildConfigPanel({
               options={rimColorOptions}
               value={rimColor}
               onChange={selectRimColor}
-              getOptionColor={(option) => option.custom ? customRimColor : option.value}
             />
           )}
 
@@ -109,8 +99,43 @@ function BuildConfigPanel({
               options={caliperColorOptions}
               value={caliperColor}
               onChange={selectCaliperColor}
-              getOptionColor={(option) => option.custom ? customCaliperColor : option.value}
             />
+          )}
+
+          {activeStep?.type === 'glassTint' && resolvedGlassTintColorOptions.length > 0 && (
+            <fieldset className="m-0 min-w-0 border-0 p-0">
+              <legend className="mb-4 flex w-full justify-between gap-4 text-[12px]">
+                <span className="font-semibold text-[#60656c]">{carConfig.glassTint.label ?? 'Window Tint'}</span>
+                <strong className="font-semibold text-[#1f2328]">
+                  {resolvedGlassTintColorOptions.find((option) => option.value === glassTintColor)?.name}
+                </strong>
+              </legend>
+
+              <div className="grid gap-3">
+                {resolvedGlassTintColorOptions.map((option) => {
+                  const isSelected = glassTintColor === option.value
+
+                  return (
+                    <button
+                      className={`flex w-full cursor-pointer items-center justify-between gap-4 rounded-[3px] border px-4 py-4 text-left transition max-[420px]:px-3 ${isSelected ? 'border-[#1c69d4] bg-[#eef4ff]' : 'border-[#c9d0d8] bg-white hover:border-[#1c69d4]'}`}
+                      key={option.value}
+                      onClick={() => handleGlassTintSelect(option)}
+                      type="button"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-[14px] font-semibold text-[#1f2328]">{option.name}</span>
+                        <span className="mt-1 block text-[12px] leading-none text-[#60656c]">{formatPrice(option.price)} kr</span>
+                      </span>
+                      {isSelected && (
+                        <span className="ml-auto grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#1c69d4] text-[12px] font-bold text-white">
+                          ✓
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </fieldset>
           )}
 
           {activeStep?.type === 'seats' && (
@@ -153,21 +178,6 @@ function BuildConfigPanel({
 
           {activeStep?.type === 'order' && (
             <OrderSummary lines={orderLines} total={money} />
-          )}
-
-          {activeCustomPicker && (
-            <CustomColorPicker
-              activeCustomConfig={activeCustomConfig}
-              activeCustomPicker={activeCustomPicker}
-              customBodyColor={customBodyColor}
-              customCaliperColor={customCaliperColor}
-              customPickerRef={customPickerRef}
-              customRimColor={customRimColor}
-              onClose={onCustomPickerClose}
-              setCustomBodyColor={setCustomBodyColor}
-              setCustomCaliperColor={setCustomCaliperColor}
-              setCustomRimColor={setCustomRimColor}
-            />
           )}
         </div>
       </div>

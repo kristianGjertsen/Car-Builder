@@ -80,6 +80,26 @@ export function createColoredMaterial(originalMaterial, color, materialConfig = 
     material.clearcoatRoughness = materialConfig.clearcoatRoughness ?? material.clearcoatRoughness
   }
 
+  if ('opacity' in material) {
+    material.opacity = materialConfig.opacity ?? material.opacity
+  }
+
+  if ('transmission' in material) {
+    material.transmission = materialConfig.transmission ?? material.transmission
+  }
+
+  if ('ior' in material) {
+    material.ior = materialConfig.ior ?? material.ior
+  }
+
+  if ('thickness' in material) {
+    material.thickness = materialConfig.thickness ?? material.thickness
+  }
+
+  if ('transparent' in materialConfig) {
+    material.transparent = materialConfig.transparent
+  }
+
   material.envMapIntensity = materialConfig.envMapIntensity ?? material.envMapIntensity
 
   return material

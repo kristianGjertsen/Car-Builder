@@ -14,6 +14,34 @@ import {
   roundSceneValue,
 } from './sceneControls'
 
+function areSceneControlsEqual(firstControls, secondControls) {
+  if (!firstControls || !secondControls) {
+    return false
+  }
+
+  return (
+    firstControls.cameraAngle === secondControls.cameraAngle &&
+    firstControls.cameraHeight === secondControls.cameraHeight &&
+    firstControls.zoom === secondControls.zoom &&
+    firstControls.fov === secondControls.fov &&
+    firstControls.carAngle === secondControls.carAngle &&
+    firstControls.maxRotationX === secondControls.maxRotationX &&
+    firstControls.maxRotationY === secondControls.maxRotationY &&
+    firstControls.light === secondControls.light &&
+    firstControls.shadow === secondControls.shadow &&
+    firstControls.background === secondControls.background &&
+    firstControls.minDistance === secondControls.minDistance &&
+    firstControls.maxDistance === secondControls.maxDistance &&
+    firstControls.target?.every((value, index) => value === secondControls.target?.[index]) &&
+    firstControls.intro?.enabled === secondControls.intro?.enabled &&
+    firstControls.intro?.startHeight === secondControls.intro?.startHeight &&
+    firstControls.intro?.duration === secondControls.intro?.duration &&
+    firstControls.intro?.transition === secondControls.intro?.transition &&
+    firstControls.intro?.useLast === secondControls.intro?.useLast &&
+    firstControls.intro?.animateBetweenPositions === secondControls.intro?.animateBetweenPositions
+  )
+}
+
 export function useSceneControls({
   carConfig,
   onReady,
@@ -25,6 +53,7 @@ export function useSceneControls({
   const controlsRef = useRef(null)
   const introFrameRef = useRef(null)
   const isSceneTransitioningRef = useRef(false)
+  const isProgrammaticOrbitUpdateRef = useRef(false)
   const latestSceneControlsRef = useRef(null)
   const previousSceneGroupKeyRef = useRef(null)
   const previousScenePositionKeyRef = useRef(null)
@@ -70,7 +99,7 @@ export function useSceneControls({
   }
 
   const syncSceneControlsFromOrbit = useCallback((nextControls) => {
-    if (isSceneTransitioningRef.current) {
+    if (isSceneTransitioningRef.current || isProgrammaticOrbitUpdateRef.current) {
       return
     }
 
@@ -100,7 +129,9 @@ export function useSceneControls({
 
   const resetSceneControls = () => {
     latestSceneControlsRef.current = defaultSceneControls
-    setSceneControls(defaultSceneControls)
+    setSceneControls((currentControls) => (
+      areSceneControlsEqual(currentControls, defaultSceneControls) ? currentControls : defaultSceneControls
+    ))
   }
 
   const resetViewControlsToZero = () => {
@@ -138,10 +169,14 @@ export function useSceneControls({
     const [cameraX, cameraY, cameraZ] = cameraPosition
     const [targetX, targetY, targetZ] = sceneControls.target
 
+    isProgrammaticOrbitUpdateRef.current = true
     controls.object.position.set(cameraX, cameraY, cameraZ)
     controls.target.set(targetX, targetY, targetZ)
     controls.enabled = !isIntroActive
     controls.update()
+    queueMicrotask(() => {
+      isProgrammaticOrbitUpdateRef.current = false
+    })
   }, [cameraPosition, isIntroActive, presentationMode, sceneControls.target])
 
   useEffect(() => {
@@ -183,7 +218,9 @@ export function useSceneControls({
     if (defaultSceneControls.intro?.enabled === false && !shouldAnimateBetweenPositions) {
       introFrameRef.current = requestAnimationFrame(() => {
         latestSceneControlsRef.current = defaultSceneControls
-        setSceneControls(defaultSceneControls)
+        setSceneControls((currentControls) => (
+          areSceneControlsEqual(currentControls, defaultSceneControls) ? currentControls : defaultSceneControls
+        ))
       })
 
       return () => {
@@ -210,7 +247,11 @@ export function useSceneControls({
 
     const tick = (now) => {
       const progress = Math.min((now - startTime) / duration, 1)
-      setSceneControls(getTransitionSceneControls(startControls, endControls, progress))
+      setSceneControls((currentControls) => {
+        const nextControls = getTransitionSceneControls(startControls, endControls, progress)
+
+        return areSceneControlsEqual(currentControls, nextControls) ? currentControls : nextControls
+      })
 
       if (progress < 1) {
         introFrameRef.current = requestAnimationFrame(tick)
@@ -220,7 +261,9 @@ export function useSceneControls({
       latestSceneControlsRef.current = endControls
       isSceneTransitioningRef.current = false
       setIsIntroActive(false)
-      setSceneControls(endControls)
+      setSceneControls((currentControls) => (
+        areSceneControlsEqual(currentControls, endControls) ? currentControls : endControls
+      ))
     }
 
     introFrameRef.current = requestAnimationFrame(tick)
