@@ -1,9 +1,10 @@
-import { Suspense, lazy, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import OrderDisplay from '../components/builder/OrderDisplay'
 import OrderSummary from '../components/builder/OrderSummary'
-import SceneLoadingPanel from '../components/builder/SceneLoadingPanel'
 import Header from '../components/Header'
 import { carConfigs, defaultCarConfig } from '../cars'
+import { getOrderDisplayConfig } from '../builder/customizationSteps'
 import {
   formatPrice,
   getOrderLines,
@@ -12,8 +13,6 @@ import {
   hasColorConfig,
   readSavedBuild,
 } from '../builder/buildUtils'
-
-const CarScene = lazy(() => import('../components/CarScene'))
 
 function OrderPage() {
   const navigate = useNavigate()
@@ -38,7 +37,7 @@ function OrderPage() {
   const effectiveSeatOuterColor = selectedSeatOuterOption?.value
   const addOnValues = savedBuild?.addOnValues ?? {}
   const selectedAddOns = getSelectedAddOns(carConfig, savedBuild?.addOnValues ?? {})
-  const orderScene = {
+  const fallbackOrderScene = useMemo(() => ({
     ...carConfig.scene,
     cameraAngle: 18,
     cameraHeight: 1.05,
@@ -49,7 +48,8 @@ function OrderPage() {
     intro: {
       enabled: false,
     },
-  }
+  }), [carConfig])
+  const orderDisplay = useMemo(() => getOrderDisplayConfig(carConfig, fallbackOrderScene), [carConfig, fallbackOrderScene])
   const orderLines = getOrderLines({
     carConfig,
     customBodyColor: savedBuild?.customBodyColor ?? '',
@@ -80,27 +80,22 @@ function OrderPage() {
 
       <section className="mx-auto grid min-h-[calc(100svh-81px)] max-w-[1180px] grid-cols-[minmax(0,1fr)_390px] gap-8 px-8 py-10 max-[900px]:grid-cols-1 max-[760px]:px-4 max-[760px]:py-6">
         <div className="rounded-[3px] border border-[#dfe3e8] bg-white p-8 shadow-sm max-[760px]:p-5">
-          <div className="mb-8 h-[430px] overflow-hidden rounded-[3px] border border-[#dfe3e8] bg-[#ebe8e3] max-[760px]:h-[320px]">
-            <Suspense fallback={<SceneLoadingPanel />}>
-              <CarScene
-                addOnValues={addOnValues}
-                autoSpin
-                caliperColor={effectiveCaliperColor}
-                caliperMaterial={selectedCaliperOption?.material}
-                carColor={effectiveBodyColor}
-                carConfig={carConfig}
-                centerModel
-                paintMaterial={selectedBodyOption.material}
-                presentationMode
-                rimColor={effectiveRimColor}
-                rimMaterial={selectedRimOption.material}
-                sceneConfig={carConfig.orderScene ?? orderScene}
-                seatOuterColor={effectiveSeatOuterColor}
-                seatOuterMaterial={selectedSeatOuterOption?.material}
-                spinSpeed={0.09}
-              />
-            </Suspense>
-          </div>
+          <OrderDisplay
+            carSceneProps={{
+              addOnValues,
+              caliperColor: effectiveCaliperColor,
+              caliperMaterial: selectedCaliperOption?.material,
+              carColor: effectiveBodyColor,
+              carConfig,
+              paintMaterial: selectedBodyOption.material,
+              rimColor: effectiveRimColor,
+              rimMaterial: selectedRimOption.material,
+              seatOuterColor: effectiveSeatOuterColor,
+              seatOuterMaterial: selectedSeatOuterOption?.material,
+            }}
+            scene={orderDisplay.scene}
+            scenePositions={orderDisplay.scenePositions}
+          />
 
           <p className="text-[13px] font-semibold text-[#60656c]">Order overview</p>
           <h2 className="mt-3 max-w-[760px] text-[clamp(38px,6vw,72px)] leading-[0.96] font-normal tracking-[-0.04em]">

@@ -102,3 +102,12 @@ export function getCustomizableSteps(carConfig) {
     },
   ]
 }
+
+export function getOrderDisplayConfig(carConfig, fallbackOrderScene = {}) {
+  const orderScene = carConfig.orderScene ?? fallbackOrderScene
+
+  return {
+    scene: mergeSceneConfig(carConfig.scene, orderScene),
+    scenePositions: getScenePositions(carConfig.scene, orderScene),
+  }
+}
