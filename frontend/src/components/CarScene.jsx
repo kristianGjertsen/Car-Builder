@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom'
 import SceneCanvas from './scene/SceneCanvas'
-import SceneTunerPanel from './scene/SceneTunerPanel'
+//import SceneTunerPanel from './scene/SceneTunerPanel'
 import { useSceneControls } from './scene/useSceneControls'
 
 function CarScene({
@@ -53,19 +53,22 @@ function CarScene({
     scenePositionKey,
   })
 
-  const sceneTuner = (
-    <SceneTunerPanel
-      copySceneControls={copySceneControls}
-      resetSceneControls={resetSceneControls}
-      resetViewControlsToZero={resetViewControlsToZero}
-      sceneControls={sceneControls}
-      sceneTunerTarget={sceneTunerTarget}
-      setShowTuner={setShowTuner}
-      showTuner={showTuner}
-      updateSceneControl={updateSceneControl}
-      updateTargetControl={updateTargetControl}
-    />
-  )
+  /* const sceneTuner = (
+     //Possible to have cam settings for each scenen and test
+     
+     <SceneTunerPanel
+       copySceneControls={copySceneControls}
+       resetSceneControls={resetSceneControls}
+       resetViewControlsToZero={resetViewControlsToZero}
+       sceneControls={sceneControls}
+       sceneTunerTarget={sceneTunerTarget}
+       setShowTuner={setShowTuner}
+       showTuner={showTuner}
+       updateSceneControl={updateSceneControl}
+       updateTargetControl={updateTargetControl}
+     />
+   )
+     */
 
   return (
     <>
