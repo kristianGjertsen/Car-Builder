@@ -1,0 +1,16 @@
+name: Update portfolio
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "portfolio/**"
+
+jobs:
+  update-portfolio:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger portfolio rebuild
+        run: curl --fail --show-error --silent -X POST "${{ secrets.PORTFOLIO_DEPLOY_HOOK }}"
