@@ -2,7 +2,7 @@
   "id": "car-builder",
   "year": 2026,
   "sortDate": "2026-05-01",
-  "img": "image.webp",
+  "img": "image.png",
   "aksForUseWebsite": true,
   "languages": [
     "React",
