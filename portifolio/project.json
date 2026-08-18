@@ -1,0 +1,61 @@
+{
+  "id": "car-builder",
+  "year": 2026,
+  "sortDate": "2026-05-01",
+  "img": "image.webp",
+  "aksForUseWebsite": true,
+  "languages": [
+    "React",
+    "TypeScript",
+    "Tailwind CSS",
+    "3D"
+  ],
+  "imgAlt": "Image of Car Builder 3D test",
+  "content": {
+    "no": {
+      "title": "Car Builder",
+      "shortText": "Interaktiv 3D-bilkonfigurator med modellvalg og direkte visuelle endringer.",
+      "longText": "Car Builder er en interaktiv 3D-bilkonfigurator i nettleseren..."
+    },
+    "en": {
+      "title": "Car Builder",
+      "shortText": "Interactive 3D car configurator with model selection and direct visual customization.",
+      "longText": "Car Builder is an interactive 3D car configurator in the browser..."
+    }
+  },
+  "buttons": [
+    {
+      "previewUrl": "https://car-builder-seven.vercel.app/",
+      "label": {
+        "no": "Åpne live preview",
+        "en": "Open live preview"
+      },
+      "ariaLabel": {
+        "no": "Åpne Car Builder som live preview",
+        "en": "Open Car Builder as a live preview"
+      }
+    },
+    {
+      "href": "https://car-builder-seven.vercel.app/",
+      "label": {
+        "no": "Besøk nettsiden",
+        "en": "Visit the website"
+      },
+      "ariaLabel": {
+        "no": "Besøk Car Builder i ny fane",
+        "en": "Visit Car Builder in a new tab"
+      }
+    },
+    {
+      "href": "https://github.com/kristianGjertsen/Car-Builder",
+      "label": {
+        "no": "Se GitHub-repo",
+        "en": "View GitHub repo"
+      },
+      "ariaLabel": {
+        "no": "Åpne GitHub-repo for Car Builder",
+        "en": "Open the Car Builder GitHub repository"
+      }
+    }
+  ]
+}
