@@ -15,12 +15,12 @@
     "no": {
       "title": "Car Builder",
       "shortText": "Interaktiv 3D-bilkonfigurator med modellvalg og direkte visuelle endringer.",
-      "longText": "Car Builder er en interaktiv 3D-bilkonfigurator i nettleseren..."
+      "longText": "Car Builder er en interaktiv 3D-bilkonfigurator i nettleseren. Mulighet for å velge mellom ulike bilmodeller og tilpasse farger, felger osv."
     },
     "en": {
       "title": "Car Builder",
       "shortText": "Interactive 3D car configurator with model selection and direct visual customization.",
-      "longText": "Car Builder is an interactive 3D car configurator in the browser..."
+      "longText": "Car Builder is an interactive 3D car configurator in the browser. It allows users to choose between different car models and customize colors, wheels, and more."
     }
   },
   "buttons": [
